@@ -2,7 +2,8 @@
   "name": "FurrySocialCard.CardData.Tests",
   "rootNamespace": "FurrySocialCard.Tests.Editor",
   "references": [
-    "FurrySocialCard.CardData"
+    "FurrySocialCard.CardData",
+    "FurrySocialCard.CardPresentation"
   ],
   "includePlatforms": [
     "Editor"

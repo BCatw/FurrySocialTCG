@@ -1,11 +1,13 @@
+using System;
 using FurrySocialCard.CardData;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace FurrySocialCard.CardPresentation
 {
-    public sealed class CardObject : MonoBehaviour
+    public sealed class CardObject : MonoBehaviour, IPointerClickHandler
     {
         [SerializeField] private Image backgroundImage;
         [SerializeField] private Image iconImage;
@@ -16,6 +18,7 @@ namespace FurrySocialCard.CardPresentation
         private static Sprite squareSprite;
 
         public CardDefinition Definition { get; private set; }
+        public static event Action<CardObject, PointerEventData> Clicked;
 
         private void Reset() => FindReferences();
 
@@ -29,6 +32,8 @@ namespace FurrySocialCard.CardPresentation
             }
 
             FindReferences();
+            SetSelected(false);
+            SetDimmed(false);
             gameObject.name = $"Card_{definition.id}";
             gameObject.SetActive(true);
 
@@ -48,6 +53,27 @@ namespace FurrySocialCard.CardPresentation
             {
                 pointText.text = definition.points.ToString("00");
             }
+        }
+
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            Clicked?.Invoke(this, eventData);
+        }
+
+        public void SetSelected(bool selected)
+        {
+            transform.localScale = selected ? Vector3.one * 1.12f : Vector3.one;
+        }
+
+        public void SetDimmed(bool dimmed)
+        {
+            CanvasGroup group = GetComponent<CanvasGroup>();
+            if (group == null)
+            {
+                group = gameObject.AddComponent<CanvasGroup>();
+            }
+
+            group.alpha = dimmed ? 0.3f : 1f;
         }
 
         private void FindReferences()
