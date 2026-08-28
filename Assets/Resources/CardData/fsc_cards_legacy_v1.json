@@ -1,348 +1,348 @@
 {
-  "schemaVersion": 2,
-  "dataVersion": "fsc-resource-2026-08-29",
+  "schemaVersion": 1,
+  "dataVersion": "fsc-initial-2026-08-26",
   "cards": [
     {
       "id": "FSC-001",
       "serialNumber": 1,
-      "attribute": "束縛",
-      "tier": "獸徵",
-      "text": "尾巴"
+      "color": "紅",
+      "shape": "三角形",
+      "points": 1
     },
     {
       "id": "FSC-002",
       "serialNumber": 2,
-      "attribute": "束縛",
-      "tier": "法術",
-      "text": "鎖鏈"
+      "color": "紅",
+      "shape": "三角形",
+      "points": 2
     },
     {
       "id": "FSC-003",
       "serialNumber": 3,
-      "attribute": "束縛",
-      "tier": "器具",
-      "text": "繩子"
+      "color": "紅",
+      "shape": "三角形",
+      "points": 3
     },
     {
       "id": "FSC-004",
       "serialNumber": 4,
-      "attribute": "束縛",
-      "tier": "器具",
-      "text": "繩子"
+      "color": "紅",
+      "shape": "三角形",
+      "points": 4
     },
     {
       "id": "FSC-005",
       "serialNumber": 5,
-      "attribute": "束縛",
-      "tier": "動作",
-      "text": "抱"
+      "color": "紅",
+      "shape": "圓形",
+      "points": 1
     },
     {
       "id": "FSC-006",
       "serialNumber": 6,
-      "attribute": "束縛",
-      "tier": "動作",
-      "text": "抱"
+      "color": "紅",
+      "shape": "圓形",
+      "points": 2
     },
     {
       "id": "FSC-007",
       "serialNumber": 7,
-      "attribute": "束縛",
-      "tier": "動作",
-      "text": "抱"
+      "color": "紅",
+      "shape": "圓形",
+      "points": 3
     },
     {
       "id": "FSC-008",
       "serialNumber": 8,
-      "attribute": "束縛",
-      "tier": "動作",
-      "text": "抱"
+      "color": "紅",
+      "shape": "圓形",
+      "points": 4
     },
     {
       "id": "FSC-009",
       "serialNumber": 9,
-      "attribute": "撫摸",
-      "tier": "獸徵",
-      "text": "肉球"
+      "color": "紅",
+      "shape": "方形",
+      "points": 1
     },
     {
       "id": "FSC-010",
       "serialNumber": 10,
-      "attribute": "撫摸",
-      "tier": "法術",
-      "text": "浮空手"
+      "color": "紅",
+      "shape": "方形",
+      "points": 2
     },
     {
       "id": "FSC-011",
       "serialNumber": 11,
-      "attribute": "撫摸",
-      "tier": "器具",
-      "text": "羽毛"
+      "color": "紅",
+      "shape": "方形",
+      "points": 3
     },
     {
       "id": "FSC-012",
       "serialNumber": 12,
-      "attribute": "撫摸",
-      "tier": "器具",
-      "text": "羽毛"
+      "color": "紅",
+      "shape": "方形",
+      "points": 4
     },
     {
       "id": "FSC-013",
       "serialNumber": 13,
-      "attribute": "撫摸",
-      "tier": "動作",
-      "text": "撫摸"
+      "color": "藍",
+      "shape": "三角形",
+      "points": 1
     },
     {
       "id": "FSC-014",
       "serialNumber": 14,
-      "attribute": "撫摸",
-      "tier": "動作",
-      "text": "撫摸"
+      "color": "藍",
+      "shape": "三角形",
+      "points": 2
     },
     {
       "id": "FSC-015",
       "serialNumber": 15,
-      "attribute": "撫摸",
-      "tier": "動作",
-      "text": "撫摸"
+      "color": "藍",
+      "shape": "三角形",
+      "points": 3
     },
     {
       "id": "FSC-016",
       "serialNumber": 16,
-      "attribute": "撫摸",
-      "tier": "動作",
-      "text": "撫摸"
+      "color": "藍",
+      "shape": "三角形",
+      "points": 4
     },
     {
       "id": "FSC-017",
       "serialNumber": 17,
-      "attribute": "震動",
-      "tier": "獸徵",
-      "text": "翅膀"
+      "color": "藍",
+      "shape": "圓形",
+      "points": 1
     },
     {
       "id": "FSC-018",
       "serialNumber": 18,
-      "attribute": "震動",
-      "tier": "法術",
-      "text": "雷電"
+      "color": "藍",
+      "shape": "圓形",
+      "points": 2
     },
     {
       "id": "FSC-019",
       "serialNumber": 19,
-      "attribute": "震動",
-      "tier": "器具",
-      "text": "按摩棒"
+      "color": "藍",
+      "shape": "圓形",
+      "points": 3
     },
     {
       "id": "FSC-020",
       "serialNumber": 20,
-      "attribute": "震動",
-      "tier": "器具",
-      "text": "按摩棒"
+      "color": "藍",
+      "shape": "圓形",
+      "points": 4
     },
     {
       "id": "FSC-021",
       "serialNumber": 21,
-      "attribute": "震動",
-      "tier": "動作",
-      "text": "蹭蹭"
+      "color": "藍",
+      "shape": "方形",
+      "points": 1
     },
     {
       "id": "FSC-022",
       "serialNumber": 22,
-      "attribute": "震動",
-      "tier": "動作",
-      "text": "蹭蹭"
+      "color": "藍",
+      "shape": "方形",
+      "points": 2
     },
     {
       "id": "FSC-023",
       "serialNumber": 23,
-      "attribute": "震動",
-      "tier": "動作",
-      "text": "蹭蹭"
+      "color": "藍",
+      "shape": "方形",
+      "points": 3
     },
     {
       "id": "FSC-024",
       "serialNumber": 24,
-      "attribute": "震動",
-      "tier": "動作",
-      "text": "蹭蹭"
+      "color": "藍",
+      "shape": "方形",
+      "points": 4
     },
     {
       "id": "FSC-025",
       "serialNumber": 25,
-      "attribute": "濕潤",
-      "tier": "獸徵",
-      "text": "舌頭"
+      "color": "綠",
+      "shape": "三角形",
+      "points": 1
     },
     {
       "id": "FSC-026",
       "serialNumber": 26,
-      "attribute": "濕潤",
-      "tier": "法術",
-      "text": "膠體"
+      "color": "綠",
+      "shape": "三角形",
+      "points": 2
     },
     {
       "id": "FSC-027",
       "serialNumber": 27,
-      "attribute": "濕潤",
-      "tier": "器具",
-      "text": "潤滑液"
+      "color": "綠",
+      "shape": "三角形",
+      "points": 3
     },
     {
       "id": "FSC-028",
       "serialNumber": 28,
-      "attribute": "濕潤",
-      "tier": "器具",
-      "text": "潤滑液"
+      "color": "綠",
+      "shape": "三角形",
+      "points": 4
     },
     {
       "id": "FSC-029",
       "serialNumber": 29,
-      "attribute": "濕潤",
-      "tier": "動作",
-      "text": "舔"
+      "color": "綠",
+      "shape": "圓形",
+      "points": 1
     },
     {
       "id": "FSC-030",
       "serialNumber": 30,
-      "attribute": "濕潤",
-      "tier": "動作",
-      "text": "舔"
+      "color": "綠",
+      "shape": "圓形",
+      "points": 2
     },
     {
       "id": "FSC-031",
       "serialNumber": 31,
-      "attribute": "濕潤",
-      "tier": "動作",
-      "text": "舔"
+      "color": "綠",
+      "shape": "圓形",
+      "points": 3
     },
     {
       "id": "FSC-032",
       "serialNumber": 32,
-      "attribute": "濕潤",
-      "tier": "動作",
-      "text": "舔"
+      "color": "綠",
+      "shape": "圓形",
+      "points": 4
     },
     {
       "id": "FSC-033",
       "serialNumber": 33,
-      "attribute": "衝擊",
-      "tier": "獸徵",
-      "text": "角"
+      "color": "綠",
+      "shape": "方形",
+      "points": 1
     },
     {
       "id": "FSC-034",
       "serialNumber": 34,
-      "attribute": "衝擊",
-      "tier": "法術",
-      "text": "爆炸"
+      "color": "綠",
+      "shape": "方形",
+      "points": 2
     },
     {
       "id": "FSC-035",
       "serialNumber": 35,
-      "attribute": "衝擊",
-      "tier": "器具",
-      "text": "鞭子"
+      "color": "綠",
+      "shape": "方形",
+      "points": 3
     },
     {
       "id": "FSC-036",
       "serialNumber": 36,
-      "attribute": "衝擊",
-      "tier": "器具",
-      "text": "鞭子"
+      "color": "綠",
+      "shape": "方形",
+      "points": 4
     },
     {
       "id": "FSC-037",
       "serialNumber": 37,
-      "attribute": "衝擊",
-      "tier": "動作",
-      "text": "打"
+      "color": "黃",
+      "shape": "三角形",
+      "points": 1
     },
     {
       "id": "FSC-038",
       "serialNumber": 38,
-      "attribute": "衝擊",
-      "tier": "動作",
-      "text": "打"
+      "color": "黃",
+      "shape": "三角形",
+      "points": 2
     },
     {
       "id": "FSC-039",
       "serialNumber": 39,
-      "attribute": "衝擊",
-      "tier": "動作",
-      "text": "打"
+      "color": "黃",
+      "shape": "三角形",
+      "points": 3
     },
     {
       "id": "FSC-040",
       "serialNumber": 40,
-      "attribute": "衝擊",
-      "tier": "動作",
-      "text": "打"
+      "color": "黃",
+      "shape": "三角形",
+      "points": 4
     },
     {
       "id": "FSC-041",
       "serialNumber": 41,
-      "attribute": "侵入",
-      "tier": "獸徵",
-      "text": "觸手"
+      "color": "黃",
+      "shape": "圓形",
+      "points": 1
     },
     {
       "id": "FSC-042",
       "serialNumber": 42,
-      "attribute": "侵入",
-      "tier": "法術",
-      "text": "傳送門"
+      "color": "黃",
+      "shape": "圓形",
+      "points": 2
     },
     {
       "id": "FSC-043",
       "serialNumber": 43,
-      "attribute": "侵入",
-      "tier": "器具",
-      "text": "跳蛋"
+      "color": "黃",
+      "shape": "圓形",
+      "points": 3
     },
     {
       "id": "FSC-044",
       "serialNumber": 44,
-      "attribute": "侵入",
-      "tier": "器具",
-      "text": "跳蛋"
+      "color": "黃",
+      "shape": "圓形",
+      "points": 4
     },
     {
       "id": "FSC-045",
       "serialNumber": 45,
-      "attribute": "侵入",
-      "tier": "動作",
-      "text": "插入"
+      "color": "黃",
+      "shape": "方形",
+      "points": 1
     },
     {
       "id": "FSC-046",
       "serialNumber": 46,
-      "attribute": "侵入",
-      "tier": "動作",
-      "text": "插入"
+      "color": "黃",
+      "shape": "方形",
+      "points": 2
     },
     {
       "id": "FSC-047",
       "serialNumber": 47,
-      "attribute": "侵入",
-      "tier": "動作",
-      "text": "插入"
+      "color": "黃",
+      "shape": "方形",
+      "points": 3
     },
     {
       "id": "FSC-048",
       "serialNumber": 48,
-      "attribute": "侵入",
-      "tier": "動作",
-      "text": "插入"
+      "color": "黃",
+      "shape": "方形",
+      "points": 4
     }
   ],
   "decks": [
     {
       "id": "FSC-INITIAL",
-      "displayName": "FSC 資源牌組",
+      "displayName": "FSC 初始牌組",
       "cardIds": [
         "FSC-001",
         "FSC-002",

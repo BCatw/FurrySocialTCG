@@ -86,7 +86,7 @@ namespace FurrySocialCard.CardData
                 return false;
             }
 
-            if (document.schemaVersion != 1)
+            if (document.schemaVersion != 1 && document.schemaVersion != 2)
             {
                 error = $"Unsupported schemaVersion: {document.schemaVersion}.";
                 return false;
@@ -134,15 +134,15 @@ namespace FurrySocialCard.CardData
                     return false;
                 }
 
-                if (string.IsNullOrWhiteSpace(card.color) || string.IsNullOrWhiteSpace(card.shape))
+                if (string.IsNullOrWhiteSpace(card.Tier) || string.IsNullOrWhiteSpace(card.Attribute))
                 {
-                    error = $"Card {card.id} requires color and shape.";
+                    error = $"Card {card.id} requires tier and attribute.";
                     return false;
                 }
 
-                if (card.points <= 0)
+                if (string.IsNullOrWhiteSpace(card.DisplayText))
                 {
-                    error = $"Card {card.id} points must be positive.";
+                    error = $"Card {card.id} requires display text.";
                     return false;
                 }
             }

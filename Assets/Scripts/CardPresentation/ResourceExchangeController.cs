@@ -9,7 +9,7 @@ namespace FurrySocialCard.CardPresentation
     public sealed class ResourceExchangeController : MonoBehaviour
     {
         [SerializeField] private PlayerTurnDealController gameFlow;
-        [SerializeField] private MatchRule matchRule = MatchRule.SameColorAndShape;
+        [SerializeField] private MatchRule matchRule = MatchRule.SameTierAndAttribute;
         [SerializeField, Min(0f)] private float chainDrawIntervalSeconds = 0.18f;
 
         private readonly List<CardObject> candidates = new List<CardObject>();
@@ -224,14 +224,14 @@ namespace FurrySocialCard.CardPresentation
                 return false;
             }
 
-            bool sameColor = source.color == target.color;
-            bool sameShape = source.shape == target.shape;
+            bool sameTier = source.Tier == target.Tier;
+            bool sameAttribute = source.Attribute == target.Attribute;
             switch (rule)
             {
-                case MatchRule.SameColor: return sameColor;
-                case MatchRule.SameShape: return sameShape;
-                case MatchRule.SameColorOrShape: return sameColor || sameShape;
-                default: return sameColor && sameShape;
+                case MatchRule.SameTier: return sameTier;
+                case MatchRule.SameAttribute: return sameAttribute;
+                case MatchRule.SameTierOrAttribute: return sameTier || sameAttribute;
+                default: return sameTier && sameAttribute;
             }
         }
 
@@ -249,10 +249,11 @@ namespace FurrySocialCard.CardPresentation
 
         public enum MatchRule
         {
-            SameColorAndShape,
-            SameColor,
-            SameShape,
-            SameColorOrShape
+            SameTierAndAttribute,
+            SameTier,
+            SameAttribute,
+            SameTierOrAttribute
         }
     }
 }
+

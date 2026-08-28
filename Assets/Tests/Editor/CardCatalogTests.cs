@@ -15,11 +15,25 @@ namespace FurrySocialCard.Tests.Editor
             Assert.That(CardCatalog.TryParse(source.text, out CardCatalog catalog, out string error), Is.True, error);
             Assert.That(catalog.Cards, Has.Count.EqualTo(48));
             Assert.That(catalog.TryGetCard("FSC-048", out CardDefinition lastCard), Is.True);
-            Assert.That(lastCard.color, Is.EqualTo("黃"));
-            Assert.That(lastCard.shape, Is.EqualTo("方形"));
-            Assert.That(lastCard.points, Is.EqualTo(4));
+            Assert.That(lastCard.tier, Is.EqualTo("動作"));
+            Assert.That(lastCard.attribute, Is.EqualTo("侵入"));
+            Assert.That(lastCard.text, Is.EqualTo("插入"));
             Assert.That(catalog.TryGetDeck("FSC-INITIAL", out DeckDefinition deck), Is.True);
             Assert.That(deck.cardIds, Has.Count.EqualTo(48));
+        }
+
+        [Test]
+        public void LegacyBundledCatalog_RemainsReadable()
+        {
+            TextAsset source = Resources.Load<TextAsset>("CardData/fsc_cards_legacy_v1");
+
+            Assert.That(source, Is.Not.Null);
+            Assert.That(CardCatalog.TryParse(source.text, out CardCatalog catalog, out string error), Is.True, error);
+            Assert.That(catalog.Cards, Has.Count.EqualTo(48));
+            Assert.That(catalog.TryGetCard("FSC-048", out CardDefinition card), Is.True);
+            Assert.That(card.Tier, Is.EqualTo("黃"));
+            Assert.That(card.Attribute, Is.EqualTo("方形"));
+            Assert.That(card.DisplayText, Is.EqualTo("04"));
         }
 
         [Test]
@@ -46,3 +60,4 @@ namespace FurrySocialCard.Tests.Editor
         }
     }
 }
+

@@ -3,7 +3,9 @@
   "rootNamespace": "FurrySocialCard.Tests.Editor",
   "references": [
     "FurrySocialCard.CardData",
-    "FurrySocialCard.CardPresentation"
+    "FurrySocialCard.CardPresentation",
+    "Unity.TextMeshPro",
+    "UnityEngine.UI"
   ],
   "includePlatforms": [
     "Editor"

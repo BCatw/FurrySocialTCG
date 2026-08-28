@@ -2,7 +2,7 @@
 
 ## 現行資料
 
-`Assets/Resources/CardData/fsc_cards.json` 是遊戲隨附的離線基準資料。目前依 `FSC_牌庫表.xlsx` 的 `FSC` 分頁建立，共 48 張牌：4 種顏色、3 種形狀、4 種點數的所有組合。
+`Assets/Resources/CardData/fsc_cards.json` 是遊戲隨附的離線基準資料。目前依新版 `遊戲流程表 - FSC.csv` 建立，共 48 張資源牌：6 種屬性，每種包含獸徵 1 張、法術 1 張、器具 2 張、動作 4 張。舊版資料保留在 `fsc_cards_legacy_v1.json`。
 
 這只是目前的遊戲資料模型，沒有套用花牌月份、牌名或役等規則。
 
@@ -12,33 +12,34 @@
 
 ```json
 {
-  "schemaVersion": 1,
-  "dataVersion": "2026.08.27.1",
+  "schemaVersion": 2,
+  "dataVersion": "fsc-resource-2026-08-29",
   "cards": [
     {
       "id": "FSC-001",
       "serialNumber": 1,
-      "color": "紅",
-      "shape": "三角形",
-      "points": 1
+      "attribute": "束縛",
+      "tier": "獸徵",
+      "text": "尾巴"
     }
   ],
   "decks": [
     {
       "id": "FSC-INITIAL",
-      "displayName": "FSC 初始牌組",
+      "displayName": "FSC 資源牌組",
       "cardIds": ["FSC-001"]
     }
   ]
 }
 ```
 
-- `schemaVersion`：程式資料格式版本；目前只能是 `1`。欄位結構改變時才遞增。
+- `schemaVersion`：目前正式格式為 `2`；程式仍可讀取舊版 `1`，方便回滾。
 - `dataVersion`：每次上線資料都要更新的版本字串，建議使用日期加流水號。
 - `id`：永久且唯一的卡牌識別碼。卡名或數值修改時不要變更；只有另一張新卡才使用新 ID。
 - `serialNumber`：正整數且不可重複，供企劃辨識與排序。
-- `color`、`shape`：目前保留為字串，允許後續增加類型，不受寫死的列舉限制。
-- `points`：目前必須是正整數。
+- `attribute`：資源屬性，目前為束縛、撫摸、震動、濕潤、衝擊、侵入；畫面以圖形表示。
+- `tier`：資源層級，目前為獸徵、法術、器具、動作；畫面以低飽和度底色表示。
+- `text`：卡片顯示文字，取代舊版數字。
 - `decks`：定義實際牌組；每個 `cardIds` 都必須引用存在的卡牌，而且同一牌組內不可重複。
 
 ## Unity 場景設定
@@ -70,3 +71,4 @@
 - 若需直接讀取私人 Google Sheet／Drive，請先安裝並連線相應的 Google Drive 外掛；公開 CSV／JSON 下載網址則不需要。
 
 在資料尚未定案期間，建議每次更新都先讓 Codex產生差異摘要與驗證結果，再部署到正式網址。
+
