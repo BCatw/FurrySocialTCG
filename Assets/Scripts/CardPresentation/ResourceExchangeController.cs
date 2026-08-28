@@ -11,9 +11,13 @@ namespace FurrySocialCard.CardPresentation
         [SerializeField] private PlayerTurnDealController gameFlow;
         [SerializeField] private MatchRule matchRule = MatchRule.SameTierAndAttribute;
         [SerializeField, Min(0f)] private float chainDrawIntervalSeconds = 0.18f;
+        [Tooltip("每次手牌成功吃牌後，最多可以連續補幾張牌；設為 0 時不補牌。")]
+        [SerializeField, Min(0)] private int maxChainDrawsPerTurn = 3;
 
         private readonly List<CardObject> candidates = new List<CardObject>();
         private CardObject selectedHandCard;
+        private CardObject pendingDrawnCard;
+        private CardObject selectedDrawCandidate;
         private Coroutine exchangeRoutine;
 
         private void OnEnable()
@@ -53,7 +57,21 @@ namespace FurrySocialCard.CardPresentation
 
         private void HandleCardClicked(CardObject card, PointerEventData eventData)
         {
-            if (!CanInteract() || card == null)
+            if (card == null)
+            {
+                return;
+            }
+
+            if (pendingDrawnCard != null)
+            {
+                if (candidates.Contains(card))
+                {
+                    selectedDrawCandidate = card;
+                }
+                return;
+            }
+
+            if (!CanInteract())
             {
                 return;
             }
@@ -126,7 +144,8 @@ namespace FurrySocialCard.CardPresentation
 
         private IEnumerator ResolveChainDraws()
         {
-            while (true)
+            int chainDrawCount = 0;
+            while (chainDrawCount < maxChainDrawsPerTurn)
             {
                 CardObject drawnCard = null;
                 yield return gameFlow.DrawToBattlefield(card => drawnCard = card);
@@ -134,6 +153,7 @@ namespace FurrySocialCard.CardPresentation
                 {
                     yield break;
                 }
+                chainDrawCount++;
 
                 if (chainDrawIntervalSeconds > 0f)
                 {
@@ -146,9 +166,57 @@ namespace FurrySocialCard.CardPresentation
                     yield break;
                 }
 
-                Vector2 drawnPosition = RectTransformUtility.WorldToScreenPoint(null, drawnCard.transform.position);
-                CardObject eatenCard = ChooseCandidate(candidates, drawnPosition, null);
+                CardObject eatenCard;
+                if (candidates.Count == 1)
+                {
+                    eatenCard = candidates[0];
+                }
+                else
+                {
+                    pendingDrawnCard = drawnCard;
+                    selectedDrawCandidate = null;
+                    RefreshDrawCandidateDimming();
+                    yield return new WaitUntil(() => selectedDrawCandidate != null);
+                    eatenCard = selectedDrawCandidate;
+                    ClearDrawCandidateSelection();
+                }
+
                 yield return gameFlow.MoveCardsToResourceAnimated(drawnCard, eatenCard);
+            }
+        }
+
+        private void RefreshDrawCandidateDimming()
+        {
+            if (gameFlow == null || pendingDrawnCard == null)
+            {
+                return;
+            }
+
+            pendingDrawnCard.SetSelected(true);
+            foreach (CardObject fieldCard in gameFlow.BattlefieldCards)
+            {
+                if (fieldCard != null)
+                {
+                    bool canBeChosen = fieldCard == pendingDrawnCard || candidates.Contains(fieldCard);
+                    fieldCard.SetDimmed(!canBeChosen);
+                }
+            }
+        }
+
+        private void ClearDrawCandidateSelection()
+        {
+            pendingDrawnCard?.SetSelected(false);
+            pendingDrawnCard = null;
+            selectedDrawCandidate = null;
+
+            if (gameFlow == null)
+            {
+                return;
+            }
+
+            foreach (CardObject fieldCard in gameFlow.BattlefieldCards)
+            {
+                fieldCard?.SetDimmed(false);
             }
         }
 
@@ -162,6 +230,8 @@ namespace FurrySocialCard.CardPresentation
 
         private void ClearSelection()
         {
+            ClearDrawCandidateSelection();
+
             if (selectedHandCard != null)
             {
                 selectedHandCard.SetSelected(false);
