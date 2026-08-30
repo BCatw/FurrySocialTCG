@@ -77,6 +77,28 @@ namespace FurrySocialCard.CardPresentation
             activeRoutine = StartCoroutine(DrawForPlayerRoutine());
         }
 
+        public void CompleteResourceExchange()
+        {
+            if (CurrentPhase != Phase.ResourceExchange || IsAnimating)
+            {
+                return;
+            }
+
+            SetDrawButtonEnabled(false);
+            SetPhase(Phase.AttackSelection);
+        }
+
+        public void CompleteAttackSelection()
+        {
+            if (CurrentPhase != Phase.AttackSelection)
+            {
+                return;
+            }
+
+            SetPhase(Phase.PlayerDraw);
+            SetDrawButtonEnabled(deckController != null && deckController.RemainingCount > 0);
+        }
+
         public IEnumerator DrawToBattlefield(Action<CardObject> completed)
         {
             CardObject drawnCard = null;
@@ -412,7 +434,8 @@ namespace FurrySocialCard.CardPresentation
             DealingBattlefield,
             DealingPlayerHand,
             PlayerDraw,
-            ResourceExchange
+            ResourceExchange,
+            AttackSelection
         }
     }
 }

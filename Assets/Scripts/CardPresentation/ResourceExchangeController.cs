@@ -134,12 +134,14 @@ namespace FurrySocialCard.CardPresentation
             {
                 yield return gameFlow.MoveHandCardToBattlefieldAnimated(playedCard);
                 exchangeRoutine = null;
+                gameFlow.CompleteResourceExchange();
                 yield break;
             }
 
             yield return gameFlow.MoveCardsToResourceAnimated(playedCard, eatenCard);
             yield return ResolveChainDraws();
             exchangeRoutine = null;
+            gameFlow.CompleteResourceExchange();
         }
 
         private IEnumerator ResolveChainDraws()
