@@ -22,6 +22,8 @@ namespace FurrySocialCard.CardPresentation
         private Vector2 closedPosition;
         private bool isOpen;
 
+        public RectTransform ResourceGrid => resourceGrid;
+
         private void Awake()
         {
             FindReferences();
@@ -121,11 +123,39 @@ namespace FurrySocialCard.CardPresentation
             }
         }
 
+        public void SetPatternMode(bool active)
+        {
+            if (resourceGrid == null)
+            {
+                return;
+            }
+
+            for (int index = 0; index < resourceGrid.childCount; index++)
+            {
+                ResourceCellView cell = resourceGrid.GetChild(index).GetComponent<ResourceCellView>();
+                cell?.SetPatternMode(active);
+            }
+
+            if (!active)
+            {
+                Refresh();
+            }
+        }
+
         private void FindReferences()
         {
-            table ??= transform as RectTransform;
-            resourceGrid ??= table?.Find("ResourceGrid") as RectTransform;
-            gameFlow ??= FindObjectOfType<PlayerTurnDealController>();
+            if (table == null)
+            {
+                table = transform as RectTransform;
+            }
+            if (resourceGrid == null && table != null)
+            {
+                resourceGrid = table.Find("ResourceGrid") as RectTransform;
+            }
+            if (gameFlow == null)
+            {
+                gameFlow = FindObjectOfType<PlayerTurnDealController>();
+            }
 
             if (tableTargetPosition == null && table != null)
             {
