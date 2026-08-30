@@ -98,7 +98,7 @@ namespace FurrySocialCard.CardPresentation
             }
         }
 
-        private static Color ResolveTierColor(string tier)
+        public static Color ResolveTierColor(string tier)
         {
             switch (tier)
             {
@@ -114,7 +114,7 @@ namespace FurrySocialCard.CardPresentation
             }
         }
 
-        private static Sprite ResolveAttributeSprite(string attribute)
+        public static Sprite ResolveAttributeSprite(string attribute)
         {
             Shape shape;
             switch (attribute)

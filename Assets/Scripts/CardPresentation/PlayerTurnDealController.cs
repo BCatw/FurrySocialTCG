@@ -38,6 +38,7 @@ namespace FurrySocialCard.CardPresentation
         public IReadOnlyList<CardObject> ResourceCards => resourceCards;
         public bool IsAnimating { get; private set; }
         public event Action<Phase> PhaseChanged;
+        public event Action ResourceCardsChanged;
 
         private void Awake()
         {
@@ -136,6 +137,7 @@ namespace FurrySocialCard.CardPresentation
             }
             ReflowResource();
             IsAnimating = false;
+            ResourceCardsChanged?.Invoke();
         }
 
         private IEnumerator DrawForPlayerRoutine()
@@ -379,6 +381,7 @@ namespace FurrySocialCard.CardPresentation
             battlefieldCards.Clear();
             handCards.Clear();
             resourceCards.Clear();
+            ResourceCardsChanged?.Invoke();
         }
 
         private void SetDrawButtonEnabled(bool enabled)
