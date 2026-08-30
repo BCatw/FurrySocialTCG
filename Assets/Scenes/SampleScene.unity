@@ -867,6 +867,7 @@ MonoBehaviour:
   gameFlow: {fileID: 533434920}
   matchRule: 3
   chainDrawIntervalSeconds: 0.18
+  maxChainDrawsPerTurn: 3
 --- !u!1 &545165184
 GameObject:
   m_ObjectHideFlags: 0
