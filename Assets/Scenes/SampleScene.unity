@@ -657,6 +657,7 @@ GameObject:
   - component: {fileID: 533434920}
   - component: {fileID: 533434924}
   - component: {fileID: 533434925}
+  - component: {fileID: 533434926}
   m_Layer: 0
   m_Name: Card Game Flow
   m_TagString: Untagged
@@ -664,6 +665,38 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &533434926
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 533434919}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a79cbf10630461e94876426e4f15495, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  characterData: {fileID: 4900000, guid: 35fb6423e62440e690a3a81d08084c11, type: 3}
+  characterSprites:
+  - characterId: char_T000
+    portraitA: {fileID: 21300000, guid: 60cb16f0d9423874593462ed0e37f282, type: 3}
+  - characterId: char_T001
+    portraitA: {fileID: 21300000, guid: 25b939a6cb2f3b74b8df7d182fe4e55b, type: 3}
+  - characterId: char_T002
+    portraitA: {fileID: 21300000, guid: f51f3fff12ff0f142a89d798d85a0e96, type: 3}
+  playerTeam:
+  - char_T000
+  - char_T001
+  - char_T002
+  enemyTeam:
+  - char_T000
+  - char_T001
+  - char_T002
+  gameFlow: {fileID: 533434920}
+  attackSelection: {fileID: 533434925}
+  playerCharacterGroups: {fileID: 1801541466}
+  enemyCharacterGroups: {fileID: 1873834372}
 --- !u!114 &533434925
 MonoBehaviour:
   m_ObjectHideFlags: 0

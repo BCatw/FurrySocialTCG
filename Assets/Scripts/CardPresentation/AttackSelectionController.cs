@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -21,6 +22,8 @@ namespace FurrySocialCard.CardPresentation
         private readonly Dictionary<CharacterAttackTarget, RectTransform> lines = new Dictionary<CharacterAttackTarget, RectTransform>();
         private RectTransform lineParent;
         private CharacterAttackTarget selectedAlly;
+
+        public event Action<IReadOnlyDictionary<CharacterAttackTarget, CharacterAttackTarget>> AttackConfirmed;
 
         private void Awake()
         {
@@ -91,6 +94,7 @@ namespace FurrySocialCard.CardPresentation
         private void CompleteAttackSelection()
         {
             if (gameFlow == null || gameFlow.CurrentPhase != PlayerTurnDealController.Phase.AttackSelection) return;
+            AttackConfirmed?.Invoke(targets);
             ClearSelection();
             gameFlow.CompleteAttackSelection();
         }

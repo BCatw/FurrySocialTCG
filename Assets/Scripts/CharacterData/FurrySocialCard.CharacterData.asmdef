@@ -1,12 +1,7 @@
 {
-  "name": "FurrySocialCard.CardPresentation",
-  "rootNamespace": "FurrySocialCard.CardPresentation",
-  "references": [
-    "FurrySocialCard.CardData",
-    "FurrySocialCard.CharacterData",
-    "Unity.TextMeshPro",
-    "UnityEngine.UI"
-  ],
+  "name": "FurrySocialCard.CharacterData",
+  "rootNamespace": "FurrySocialCard.CharacterData",
+  "references": [],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

@@ -30,6 +30,7 @@ namespace FurrySocialCard.CardPresentation
         private readonly List<CardObject> battlefieldCards = new List<CardObject>();
         private readonly List<CardObject> handCards = new List<CardObject>();
         private readonly List<CardObject> resourceCards = new List<CardObject>();
+        private readonly HashSet<CardObject> tappedResourceCards = new HashSet<CardObject>();
         private Coroutine activeRoutine;
 
         public Phase CurrentPhase { get; private set; } = Phase.WaitingForStart;
@@ -95,8 +96,60 @@ namespace FurrySocialCard.CardPresentation
                 return;
             }
 
+            UntapAllResources();
             SetPhase(Phase.PlayerDraw);
             SetDrawButtonEnabled(deckController != null && deckController.RemainingCount > 0);
+        }
+
+        public List<CardObject> GetAvailableResourceCardsSnapshot()
+        {
+            var result = new List<CardObject>();
+            foreach (CardObject card in resourceCards)
+            {
+                if (card != null && !tappedResourceCards.Contains(card)) result.Add(card);
+            }
+            return result;
+        }
+
+        public void TapResources(IEnumerable<CardObject> cards)
+        {
+            if (cards == null) return;
+            foreach (CardObject card in cards)
+            {
+                if (card != null && resourceCards.Contains(card))
+                {
+                    tappedResourceCards.Add(card);
+                    card.SetDimmed(true);
+                }
+            }
+            ResourceCardsChanged?.Invoke();
+        }
+
+        public void ConsumeResources(IEnumerable<CardObject> cards)
+        {
+            if (cards == null) return;
+            bool changed = false;
+            foreach (CardObject card in new List<CardObject>(cards))
+            {
+                if (card == null || !resourceCards.Remove(card)) continue;
+                tappedResourceCards.Remove(card);
+                spawnedCards.Remove(card);
+                card.transform.DOKill();
+                Destroy(card.gameObject);
+                changed = true;
+            }
+            if (changed)
+            {
+                ReflowResource();
+                ResourceCardsChanged?.Invoke();
+            }
+        }
+
+        private void UntapAllResources()
+        {
+            foreach (CardObject card in tappedResourceCards) card?.SetDimmed(false);
+            tappedResourceCards.Clear();
+            ResourceCardsChanged?.Invoke();
         }
 
         public IEnumerator DrawToBattlefield(Action<CardObject> completed)
@@ -403,6 +456,7 @@ namespace FurrySocialCard.CardPresentation
             battlefieldCards.Clear();
             handCards.Clear();
             resourceCards.Clear();
+            tappedResourceCards.Clear();
             ResourceCardsChanged?.Invoke();
         }
 

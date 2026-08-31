@@ -1,0 +1,410 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "prototype-2026-08-31",
+  "characters": [
+    {
+      "id": "char_T000",
+      "displayName": "阿飄",
+      "tags": "Top",
+      "climaxLimit": 500,
+      "activeSkill1Id": "skill_T000_1",
+      "activeSkill2Id": "skill_T000_2",
+      "activeSkill3Id": "skill_T000_3",
+      "passiveSkillId": null
+    },
+    {
+      "id": "char_T001",
+      "displayName": "鳴雷起",
+      "tags": "Shibari",
+      "climaxLimit": 300,
+      "activeSkill1Id": "skill_T001_1",
+      "activeSkill2Id": "skill_T001_2",
+      "activeSkill3Id": "skill_T001_3",
+      "passiveSkillId": null
+    },
+    {
+      "id": "char_T002",
+      "displayName": "雷命",
+      "tags": "Sadism",
+      "climaxLimit": 500,
+      "activeSkill1Id": "skill_T002_1",
+      "activeSkill2Id": "skill_T002_2",
+      "activeSkill3Id": "skill_T002_3",
+      "passiveSkillId": null
+    },
+    {
+      "id": "char_T003",
+      "displayName": "肯滋",
+      "tags": "Toy",
+      "climaxLimit": 200,
+      "activeSkill1Id": "skill_T003_1",
+      "activeSkill2Id": "skill_T003_2",
+      "activeSkill3Id": "skill_T003_3",
+      "passiveSkillId": null
+    },
+    {
+      "id": "char_T004",
+      "displayName": "內克",
+      "tags": "Slime",
+      "climaxLimit": 500,
+      "activeSkill1Id": "skill_T004_1",
+      "activeSkill2Id": "skill_T004_2",
+      "activeSkill3Id": "skill_T004_3",
+      "passiveSkillId": null
+    },
+    {
+      "id": "char_T005",
+      "displayName": "三王",
+      "tags": "Buttom",
+      "climaxLimit": 300,
+      "activeSkill1Id": "skill_T005_1",
+      "activeSkill2Id": "skill_T005_2",
+      "activeSkill3Id": "skill_T005_3",
+      "passiveSkillId": null
+    }
+  ],
+  "skills": [
+    {
+      "id": "skill_T000_1",
+      "displayName": "我要你懷我的種",
+      "skillType": "active",
+      "pattern": "〈獸徵〉 >= 3 + 〈法術〉 >= 2 + [侵入] >= 4",
+      "resourceBehavior": "Consume",
+      "effectIds": [
+        "effect_SelfForceClimax",
+        "effect_TargetClimaxDown_Medium"
+      ],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T000_2",
+      "displayName": "乖乖讓我爽，等等幹死你",
+      "skillType": "active",
+      "pattern": "[撫摸] >= 2 + [侵入] >= 2",
+      "resourceBehavior": "Tap",
+      "effectIds": [
+        "effect_TargetClimaxDown_Small",
+        "effect_Draw_1"
+      ],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T000_3",
+      "displayName": "我們慢慢來",
+      "skillType": "active",
+      "pattern": "〈動作〉 >= 2 + 〈動作〉[侵入] >= 2",
+      "resourceBehavior": "Check",
+      "effectIds": [
+        "effect_SelfClimaxUp_Time<動作>"
+      ],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T001_1",
+      "displayName": "繩縛邀約",
+      "skillType": "active",
+      "pattern": "[束縛] >= 4 + 〈獸徵〉[束縛] >= 1 + 〈器具〉[束縛] >= 1",
+      "resourceBehavior": "Consume",
+      "effectIds": [
+        "effect_TargetClimaxUp_Massive",
+        "effect_TargetClimaxDown_Medium"
+      ],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T001_2",
+      "displayName": "好歹我也是個攻",
+      "skillType": "active",
+      "pattern": "[濕潤] >= 2 + [侵入] >= 2",
+      "resourceBehavior": "Tap",
+      "effectIds": [
+        "effect_TargetClimaxUp_Medium",
+        "effect_TargetClimaxDown_Small"
+      ],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T001_3",
+      "displayName": "我的主人",
+      "skillType": "active",
+      "pattern": "〈動作〉 >= 2 + 〈動作〉[束縛] >= 2",
+      "resourceBehavior": "Check",
+      "effectIds": [
+        "effect_SelfClimaxUp_Time<動作>"
+      ],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T002_1",
+      "displayName": "你是我的玩具，別想有的沒的",
+      "skillType": "active",
+      "pattern": "〈法術〉 >= 3",
+      "resourceBehavior": "Consume",
+      "effectIds": [
+        "effect_SelfClimaxUp_Small",
+        "effect_TargetResourceConsume"
+      ],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T002_2",
+      "displayName": "我的小肉便器啊，要撐住喔",
+      "skillType": "active",
+      "pattern": "〈法術〉 >= 3 + [侵入] >= 3",
+      "resourceBehavior": "Tap",
+      "effectIds": [
+        "effect_TargetClimaxUp_Massive",
+        "effect_TargetClimaxDown_Massive"
+      ],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T002_3",
+      "displayName": "小傢伙乖",
+      "skillType": "active",
+      "pattern": "〈動作〉 >= 2 + 〈動作〉[撫摸] >= 2",
+      "resourceBehavior": "Check",
+      "effectIds": [
+        "effect_SelfClimaxUp_Time<動作>"
+      ],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T003_1",
+      "displayName": "店裡有什麼玩具呢？",
+      "skillType": "active",
+      "pattern": null,
+      "resourceBehavior": null,
+      "effectIds": [],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T003_2",
+      "displayName": "有點癢癢的喔",
+      "skillType": "active",
+      "pattern": null,
+      "resourceBehavior": null,
+      "effectIds": [],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T003_3",
+      "displayName": "蹭蹭臉頰",
+      "skillType": "active",
+      "pattern": null,
+      "resourceBehavior": null,
+      "effectIds": [],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T004_1",
+      "displayName": "你的身體是我的了",
+      "skillType": "active",
+      "pattern": null,
+      "resourceBehavior": null,
+      "effectIds": [],
+      "designStatus": null
+    },
+    {
+      "id": "skill_T004_2",
+      "displayName": "我的身體很舒服吧？",
+      "skillType": "active",
+      "pattern": null,
+      "resourceBehavior": null,
+      "effectIds": [],
+      "designStatus": null
+    },
+    {
+      "id": "skill_T004_3",
+      "displayName": "真好吃",
+      "skillType": "active",
+      "pattern": null,
+      "resourceBehavior": null,
+      "effectIds": [],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T005_1",
+      "displayName": "我坐上來囉",
+      "skillType": "active",
+      "pattern": null,
+      "resourceBehavior": null,
+      "effectIds": [],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T005_2",
+      "displayName": "讓我好好服侍你",
+      "skillType": "active",
+      "pattern": null,
+      "resourceBehavior": null,
+      "effectIds": [],
+      "designStatus": "draft"
+    },
+    {
+      "id": "skill_T005_3",
+      "displayName": "嚐個味道",
+      "skillType": "active",
+      "pattern": null,
+      "resourceBehavior": null,
+      "effectIds": [],
+      "designStatus": null
+    }
+  ],
+  "effects": [
+    {
+      "id": "effect_SelfForceClimax",
+      "effectType": "force_climax",
+      "target": "self",
+      "value": "0",
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_TargetClimaxUp_Massive",
+      "effectType": "climax_delta",
+      "target": "enemy_single",
+      "value": "150",
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_TargetClimaxUp_Medium",
+      "effectType": "climax_delta",
+      "target": "enemy_single",
+      "value": "100",
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_TargetClimaxUp_Small",
+      "effectType": "climax_delta",
+      "target": "enemy_single",
+      "value": "50",
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_TargetClimaxDown_Massive",
+      "effectType": "climax_delta",
+      "target": "enemy_single",
+      "value": "-125",
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_TargetClimaxDown_Medium",
+      "effectType": "climax_delta",
+      "target": "enemy_single",
+      "value": "-75",
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_TargetClimaxDown_Small",
+      "effectType": "climax_delta",
+      "target": "enemy_single",
+      "value": "-25",
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_SelfClimaxUp_Massive",
+      "effectType": "climax_delta",
+      "target": "self",
+      "value": "150",
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_SelfClimaxUp_Medium",
+      "effectType": "climax_delta",
+      "target": "self",
+      "value": "100",
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_SelfClimaxUp_Small",
+      "effectType": "climax_delta",
+      "target": "self",
+      "value": "50",
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_Draw_1",
+      "effectType": "draw_card",
+      "target": "self",
+      "value": "1",
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_TakeResource_1",
+      "effectType": "resource_take",
+      "target": "self",
+      "value": "1",
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_SelfClimaxUp_Time<動作>",
+      "effectType": "climax_delta",
+      "target": "self",
+      "value": "2+1*<動作>",
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_TargetResourceConsume",
+      "effectType": "resource_consume",
+      "target": null,
+      "value": "1",
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_mingleiqi_3_1",
+      "effectType": "unresolved",
+      "target": null,
+      "value": null,
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_leiming_1_1",
+      "effectType": "unresolved",
+      "target": null,
+      "value": null,
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_leiming_2_1",
+      "effectType": "unresolved",
+      "target": null,
+      "value": null,
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_leiming_2_2",
+      "effectType": "unresolved",
+      "target": null,
+      "value": null,
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_leiming_3_1",
+      "effectType": "unresolved",
+      "target": null,
+      "value": null,
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_kenzi_1_1",
+      "effectType": "unresolved",
+      "target": null,
+      "value": null,
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_kenzi_2_1",
+      "effectType": "unresolved",
+      "target": null,
+      "value": null,
+      "durationTurns": 0
+    },
+    {
+      "id": "effect_kenzi_3_1",
+      "effectType": "unresolved",
+      "target": null,
+      "value": null,
+      "durationTurns": 0
+    }
+  ]
+}
