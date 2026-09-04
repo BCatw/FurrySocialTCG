@@ -13,6 +13,7 @@ namespace FurrySocialCard.CardPresentation
         [SerializeField] private PlayerTurnDealController gameFlow;
         [SerializeField] private ResourceExchangeController resourceExchange;
         [SerializeField] private CharacterBattleController characterBattle;
+        [SerializeField] private AttackSelectionController attackSelection;
         [SerializeField] private Transform playerCharacterGroups;
         [SerializeField] private Transform enemyCharacterGroups;
 
@@ -57,6 +58,7 @@ namespace FurrySocialCard.CardPresentation
                 turnRoutine = null;
                 hand.Clear();
                 initialHandReady = false;
+                attackSelection?.SetEnemyAttackMovement(attackTargets.Keys, false);
                 attackTargets.Clear();
                 ClearLines();
                 ResetRandom();
@@ -115,6 +117,7 @@ namespace FurrySocialCard.CardPresentation
             if (decisionDelaySeconds > 0f) yield return new WaitForSeconds(decisionDelaySeconds);
             gameFlow.BeginEnemyAttackSelection();
             BuildRandomAttacks();
+            attackSelection?.SetEnemyAttackMovement(attackTargets.Keys, true);
             CreateLines();
 
             float elapsed = 0f;
@@ -127,6 +130,7 @@ namespace FurrySocialCard.CardPresentation
 
             gameFlow.BeginEnemyAttackPerformance();
             characterBattle?.ResolveEnemyAttacks(attackTargets);
+            attackSelection?.SetEnemyAttackMovement(attackTargets.Keys, false);
             attackTargets.Clear();
             ClearLines();
             if (decisionDelaySeconds > 0f) yield return new WaitForSeconds(decisionDelaySeconds);
@@ -178,8 +182,8 @@ namespace FurrySocialCard.CardPresentation
             if (enemyCharacterGroups == null || players.Count == 0) return;
             for (int index = 0; index < enemyCharacterGroups.childCount; index++)
             {
-                Transform child = enemyCharacterGroups.GetChild(index);
-                if (!child.gameObject.activeInHierarchy) continue;
+                Transform child = CharacterSlotUtility.ResolveCharacter(enemyCharacterGroups.GetChild(index));
+                if (child == null || !child.gameObject.activeInHierarchy) continue;
                 CharacterAttackTarget enemy = child.GetComponent<CharacterAttackTarget>();
                 if (enemy != null) attackTargets[enemy] = players[random.Next(players.Count)];
             }
@@ -190,8 +194,8 @@ namespace FurrySocialCard.CardPresentation
             if (group == null) return;
             for (int index = 0; index < group.childCount; index++)
             {
-                Transform child = group.GetChild(index);
-                if (!child.gameObject.activeInHierarchy) continue;
+                Transform child = CharacterSlotUtility.ResolveCharacter(group.GetChild(index));
+                if (child == null || !child.gameObject.activeInHierarchy) continue;
                 CharacterAttackTarget target = child.GetComponent<CharacterAttackTarget>();
                 if (target != null) destination.Add(target);
             }
@@ -257,6 +261,7 @@ namespace FurrySocialCard.CardPresentation
             if (gameFlow == null) gameFlow = GetComponent<PlayerTurnDealController>();
             if (resourceExchange == null) resourceExchange = GetComponent<ResourceExchangeController>();
             if (characterBattle == null) characterBattle = GetComponent<CharacterBattleController>();
+            if (attackSelection == null) attackSelection = GetComponent<AttackSelectionController>();
             if (playerCharacterGroups == null) playerCharacterGroups = GameObject.Find("PlayerCharacterGroups")?.transform;
             if (enemyCharacterGroups == null) enemyCharacterGroups = GameObject.Find("EnemyCharacterGroups")?.transform;
             Canvas canvas = playerCharacterGroups != null ? playerCharacterGroups.GetComponentInParent<Canvas>() : null;

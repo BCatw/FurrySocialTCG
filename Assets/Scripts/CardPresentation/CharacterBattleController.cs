@@ -96,15 +96,17 @@ namespace FurrySocialCard.CardPresentation
             if (group == null) return;
             for (int index = 0; index < group.childCount; index++)
             {
-                Transform child = group.GetChild(index);
+                Transform slot = group.GetChild(index);
+                Transform child = CharacterSlotUtility.ResolveCharacter(slot);
                 bool hasSlot = teamIds != null && index < teamIds.Length && !string.IsNullOrWhiteSpace(teamIds[index]);
-                if (!hasSlot || !characters.TryGetValue(teamIds[index], out CharacterDefinition definition))
+                if (!hasSlot || child == null || !characters.TryGetValue(teamIds[index], out CharacterDefinition definition))
                 {
-                    child.gameObject.SetActive(false);
+                    slot.gameObject.SetActive(false);
                     if (hasSlot) Debug.LogWarning($"Character '{teamIds[index]}' was not found; slot {index + 1} is disabled.", this);
                     continue;
                 }
 
+                slot.gameObject.SetActive(true);
                 child.gameObject.SetActive(true);
                 var skillDefinitions = new SkillDefinition[3];
                 for (int skillIndex = 0; skillIndex < 3; skillIndex++) skills.TryGetValue(definition.GetActiveSkillId(skillIndex), out skillDefinitions[skillIndex]);
@@ -159,7 +161,8 @@ namespace FurrySocialCard.CardPresentation
 
             for (int childIndex = 0; childIndex < attackerGroup.childCount; childIndex++)
             {
-                CharacterAttackTarget attacker = attackerGroup.GetChild(childIndex).GetComponent<CharacterAttackTarget>();
+                Transform character = CharacterSlotUtility.ResolveCharacter(attackerGroup.GetChild(childIndex));
+                CharacterAttackTarget attacker = character != null ? character.GetComponent<CharacterAttackTarget>() : null;
                 if (attacker == null || !attackTargets.TryGetValue(attacker, out CharacterAttackTarget target)) continue;
                 if (!combatants.TryGetValue(attacker, out CharacterCombatantView attackerView) || !combatants.TryGetValue(target, out CharacterCombatantView targetView)) continue;
                 for (int skillIndex = 0; skillIndex < 3; skillIndex++)

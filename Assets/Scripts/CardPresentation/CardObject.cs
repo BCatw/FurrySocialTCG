@@ -16,6 +16,8 @@ namespace FurrySocialCard.CardPresentation
         [SerializeField] private TMP_Text pointText;
 
         private static readonly Dictionary<Shape, Sprite> ShapeSprites = new Dictionary<Shape, Sprite>();
+        private bool isSelected;
+        private bool matchHintVisible;
 
         public CardDefinition Definition { get; private set; }
         public static event Action<CardObject, PointerEventData> Clicked;
@@ -66,13 +68,26 @@ namespace FurrySocialCard.CardPresentation
 
         public void SetSelected(bool selected)
         {
+            isSelected = selected;
             transform.localScale = selected ? Vector3.one * 1.12f : Vector3.one;
+            RefreshMatchGlow();
         }
 
         public void SetMatchHint(bool visible)
         {
+            matchHintVisible = visible;
+            RefreshMatchGlow();
+        }
+
+        private void RefreshMatchGlow()
+        {
             FindReferences();
-            if (matchGlow != null) matchGlow.enabled = visible;
+            if (matchGlow == null) return;
+
+            matchGlow.GlowColor = isSelected
+                ? UIGlowEffect.SelectedColor
+                : UIGlowEffect.SelectableColor;
+            matchGlow.enabled = isSelected || matchHintVisible;
         }
 
         public void SetDimmed(bool dimmed)

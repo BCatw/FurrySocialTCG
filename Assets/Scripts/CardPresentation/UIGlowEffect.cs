@@ -9,6 +9,9 @@ namespace FurrySocialCard.CardPresentation
     [RequireComponent(typeof(Graphic))]
     public sealed class UIGlowEffect : BaseMeshEffect
     {
+        public static readonly Color SelectableColor = new Color32(0, 255, 200, 255);
+        public static readonly Color SelectedColor = new Color32(255, 155, 0, 255);
+
         [SerializeField] private Color glowColor = new Color(1f, 0.8f, 0.2f, 0.8f);
         [SerializeField, Min(0f)] private float radius = 8f;
         [SerializeField, Range(4, 24)] private int samplesPerRing = 8;

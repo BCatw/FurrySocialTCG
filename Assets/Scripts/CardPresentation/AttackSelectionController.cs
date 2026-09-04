@@ -20,6 +20,9 @@ namespace FurrySocialCard.CardPresentation
         [Header("Character Assignment Glow")]
         [SerializeField] private Color unassignedAttackColor = new Color32(0, 255, 200, 255);
         [SerializeField] private Color assignedAttackColor = new Color32(255, 155, 0, 255);
+        [Header("Character Assignment Movement")]
+        [SerializeField, Min(0f)] private float assignedMoveDistance = 40f;
+        [SerializeField, Min(0f)] private float assignedMoveDuration = 0.2f;
 
         private readonly List<CharacterAttackTarget> allies = new List<CharacterAttackTarget>();
         private readonly List<CharacterAttackTarget> enemies = new List<CharacterAttackTarget>();
@@ -84,14 +87,17 @@ namespace FurrySocialCard.CardPresentation
             if (gameFlow == null || gameFlow.CurrentPhase != PlayerTurnDealController.Phase.AttackSelection) return;
             if (character.IsAlly)
             {
-                selectedAlly = character;
+                selectedAlly = selectedAlly == character ? null : character;
+                RefreshAttackGlows();
                 return;
             }
             if (selectedAlly == null) return;
 
             if (targets.TryGetValue(selectedAlly, out CharacterAttackTarget currentTarget) && currentTarget == character)
             {
-                RemoveTarget(selectedAlly);
+                CharacterAttackTarget cancelledAlly = selectedAlly;
+                selectedAlly = null;
+                RemoveTarget(cancelledAlly);
             }
             else
             {
@@ -126,7 +132,8 @@ namespace FurrySocialCard.CardPresentation
             if (group == null) return;
             for (int index = 0; index < group.childCount; index++)
             {
-                Transform child = group.GetChild(index);
+                Transform child = CharacterSlotUtility.ResolveCharacter(group.GetChild(index));
+                if (child == null) continue;
                 CharacterAttackTarget target = child.GetComponent<CharacterAttackTarget>();
                 if (target == null) target = child.gameObject.AddComponent<CharacterAttackTarget>();
                 target.Configure(isAlly);
@@ -164,9 +171,11 @@ namespace FurrySocialCard.CardPresentation
         private void RemoveTarget(CharacterAttackTarget ally)
         {
             targets.Remove(ally);
-            if (!lines.TryGetValue(ally, out RectTransform line)) return;
-            lines.Remove(ally);
-            if (line != null) Destroy(line.gameObject);
+            if (lines.TryGetValue(ally, out RectTransform line))
+            {
+                lines.Remove(ally);
+                if (line != null) Destroy(line.gameObject);
+            }
             RefreshAttackGlows();
         }
 
@@ -176,7 +185,23 @@ namespace FurrySocialCard.CardPresentation
             {
                 if (ally == null) continue;
                 bool isAssigned = targets.ContainsKey(ally);
-                ally.SetAttackGlow(true, isAssigned ? assignedAttackColor : unassignedAttackColor);
+                bool isSelected = selectedAlly == ally;
+                ally.SetAttackGlow(true, isAssigned || isSelected ? assignedAttackColor : unassignedAttackColor);
+                ally.SetAttackOffset(isAssigned, assignedMoveDistance, assignedMoveDuration);
+            }
+        }
+
+        public void SetEnemyAttackMovement(IEnumerable<CharacterAttackTarget> attackers, bool attacking)
+        {
+            var activeAttackers = attackers != null
+                ? new HashSet<CharacterAttackTarget>(attackers)
+                : new HashSet<CharacterAttackTarget>();
+            foreach (CharacterAttackTarget enemy in enemies)
+            {
+                if (enemy != null)
+                {
+                    enemy.SetAttackOffset(attacking && activeAttackers.Contains(enemy), assignedMoveDistance, assignedMoveDuration);
+                }
             }
         }
 
@@ -184,7 +209,9 @@ namespace FurrySocialCard.CardPresentation
         {
             foreach (CharacterAttackTarget ally in allies)
             {
-                ally?.SetAttackGlow(false, unassignedAttackColor);
+                if (ally == null) continue;
+                ally.SetAttackGlow(false, unassignedAttackColor);
+                ally.SetAttackOffset(false, assignedMoveDistance, assignedMoveDuration);
             }
         }
 
