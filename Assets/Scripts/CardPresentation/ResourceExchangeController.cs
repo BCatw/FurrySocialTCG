@@ -134,7 +134,7 @@ namespace FurrySocialCard.CardPresentation
         private IEnumerator ResolvePlay(Vector2 clickScreenPosition, Camera eventCamera)
         {
             CardObject playedCard = selectedHandCard;
-            playedCard?.SetMatchHint(false);
+            ClearAllMatchHints();
             FindCandidates(playedCard, playedCard, candidates);
             CardObject eatenCard = ChooseCandidate(candidates, clickScreenPosition, eventCamera);
             ClearSelection();
@@ -208,8 +208,10 @@ namespace FurrySocialCard.CardPresentation
             {
                 if (fieldCard != null)
                 {
-                    bool canBeChosen = fieldCard == pendingDrawnCard || candidates.Contains(fieldCard);
+                    bool isCandidate = candidates.Contains(fieldCard);
+                    bool canBeChosen = fieldCard == pendingDrawnCard || isCandidate;
                     fieldCard.SetDimmed(!canBeChosen);
+                    fieldCard.SetMatchHint(isCandidate);
                 }
             }
         }
@@ -227,7 +229,9 @@ namespace FurrySocialCard.CardPresentation
 
             foreach (CardObject fieldCard in gameFlow.BattlefieldCards)
             {
-                fieldCard?.SetDimmed(false);
+                if (fieldCard == null) continue;
+                fieldCard.SetDimmed(false);
+                fieldCard.SetMatchHint(false);
             }
         }
 
