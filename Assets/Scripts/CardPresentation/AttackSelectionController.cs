@@ -17,6 +17,9 @@ namespace FurrySocialCard.CardPresentation
         [SerializeField, Min(1f)] private float lineWidth = 12f;
         [SerializeField] private Color lineColor = new Color(1f, 0.25f, 0.3f, 0.9f);
         [SerializeField, Min(0f)] private float attackPerformanceSeconds = 0.5f;
+        [Header("Character Assignment Glow")]
+        [SerializeField] private Color unassignedAttackColor = new Color32(0, 255, 200, 255);
+        [SerializeField] private Color assignedAttackColor = new Color32(255, 155, 0, 255);
 
         private readonly List<CharacterAttackTarget> allies = new List<CharacterAttackTarget>();
         private readonly List<CharacterAttackTarget> enemies = new List<CharacterAttackTarget>();
@@ -72,7 +75,8 @@ namespace FurrySocialCard.CardPresentation
                 cardGameGroup.SetActive(showCards);
             }
             if (attackEndButton != null) attackEndButton.gameObject.SetActive(isAttackSelection);
-            if (!isAttackSelection) ClearSelection();
+            if (isAttackSelection) RefreshAttackGlows();
+            else ClearSelection();
         }
 
         private void HandleCharacterClicked(CharacterAttackTarget character)
@@ -93,6 +97,7 @@ namespace FurrySocialCard.CardPresentation
             {
                 targets[selectedAlly] = character;
                 EnsureLine(selectedAlly);
+                RefreshAttackGlows();
             }
         }
 
@@ -162,12 +167,32 @@ namespace FurrySocialCard.CardPresentation
             if (!lines.TryGetValue(ally, out RectTransform line)) return;
             lines.Remove(ally);
             if (line != null) Destroy(line.gameObject);
+            RefreshAttackGlows();
+        }
+
+        private void RefreshAttackGlows()
+        {
+            foreach (CharacterAttackTarget ally in allies)
+            {
+                if (ally == null) continue;
+                bool isAssigned = targets.ContainsKey(ally);
+                ally.SetAttackGlow(true, isAssigned ? assignedAttackColor : unassignedAttackColor);
+            }
+        }
+
+        private void ClearAttackGlows()
+        {
+            foreach (CharacterAttackTarget ally in allies)
+            {
+                ally?.SetAttackGlow(false, unassignedAttackColor);
+            }
         }
 
         private void ClearSelection()
         {
             selectedAlly = null;
             targets.Clear();
+            ClearAttackGlows();
             foreach (RectTransform line in lines.Values)
             {
                 if (line != null) Destroy(line.gameObject);

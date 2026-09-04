@@ -11,7 +11,7 @@ namespace FurrySocialCard.CardPresentation
     public sealed class CardObject : MonoBehaviour, IPointerClickHandler
     {
         [SerializeField] private Image backgroundImage;
-        [SerializeField] private Outline matchOutline;
+        [SerializeField] private UIGlowEffect matchGlow;
         [SerializeField] private Image iconImage;
         [SerializeField] private TMP_Text pointText;
 
@@ -72,7 +72,7 @@ namespace FurrySocialCard.CardPresentation
         public void SetMatchHint(bool visible)
         {
             FindReferences();
-            if (matchOutline != null) matchOutline.enabled = visible;
+            if (matchGlow != null) matchGlow.enabled = visible;
         }
 
         public void SetDimmed(bool dimmed)
@@ -94,9 +94,9 @@ namespace FurrySocialCard.CardPresentation
                 backgroundImage = background != null ? background.GetComponent<Image>() : null;
             }
 
-            if (matchOutline == null && backgroundImage != null)
+            if (matchGlow == null && backgroundImage != null)
             {
-                matchOutline = backgroundImage.GetComponent<Outline>();
+                matchGlow = backgroundImage.GetComponent<UIGlowEffect>();
             }
 
             if (iconImage == null)

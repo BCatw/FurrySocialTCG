@@ -9,6 +9,7 @@ namespace FurrySocialCard.CardPresentation
         [SerializeField] private bool isAlly;
         [SerializeField] private RectTransform allyLinkPoint;
         [SerializeField] private RectTransform enemyLinkPoint;
+        [SerializeField] private UIGlowEffect attackGlow;
 
         public bool IsAlly => isAlly;
         public RectTransform ActiveLinkPoint => isAlly ? allyLinkPoint : enemyLinkPoint;
@@ -20,6 +21,15 @@ namespace FurrySocialCard.CardPresentation
             FindLinkPoints();
             if (allyLinkPoint != null) allyLinkPoint.gameObject.SetActive(isAlly);
             if (enemyLinkPoint != null) enemyLinkPoint.gameObject.SetActive(!isAlly);
+            SetAttackGlow(false, Color.white);
+        }
+
+        public void SetAttackGlow(bool visible, Color color)
+        {
+            FindLinkPoints();
+            if (attackGlow == null) return;
+            attackGlow.GlowColor = color;
+            attackGlow.enabled = visible;
         }
 
         public void OnPointerClick(PointerEventData eventData)
@@ -36,6 +46,11 @@ namespace FurrySocialCard.CardPresentation
         {
             if (allyLinkPoint == null) allyLinkPoint = FindChild("LinkPoint_Ally");
             if (enemyLinkPoint == null) enemyLinkPoint = FindChild("LinkPoint_Enemy");
+            if (attackGlow == null)
+            {
+                RectTransform background = FindChild("BG");
+                attackGlow = background != null ? background.GetComponent<UIGlowEffect>() : null;
+            }
         }
 
         private RectTransform FindChild(string childName)
