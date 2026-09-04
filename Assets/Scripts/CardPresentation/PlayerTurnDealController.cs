@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using DG.Tweening;
 using FurrySocialCard.CardData;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -20,6 +21,10 @@ namespace FurrySocialCard.CardPresentation
         [SerializeField] private RectTransform enemyResourceParent;
         [SerializeField] private Button startButton;
         [SerializeField] private Button drawButton;
+        [Header("Turn Information")]
+        [SerializeField] private GameObject turnInfoObject;
+        [SerializeField] private TMP_Text turnInfoText;
+        [SerializeField, Min(0f)] private float turnInfoSeconds = 1.5f;
         [SerializeField, Min(0f)] private float deckRevealSeconds = 0.5f;
         [SerializeField, Min(0f)] private float cardMoveDurationSeconds = 0.2f;
         [SerializeField, Min(0f)] private float dealIntervalSeconds = 0.12f;
@@ -52,6 +57,7 @@ namespace FurrySocialCard.CardPresentation
             startButton?.onClick.AddListener(StartNewGame);
             drawButton?.onClick.AddListener(DrawForPlayer);
             SetDrawButtonEnabled(false);
+            if (turnInfoObject != null) turnInfoObject.SetActive(false);
         }
 
         private void OnDestroy()
@@ -75,13 +81,13 @@ namespace FurrySocialCard.CardPresentation
 
         public void DrawForPlayer()
         {
-            if (CurrentPhase != Phase.PlayerDraw || IsAnimating || activeRoutine != null)
+            if (CurrentPhase != Phase.ResourceExchange || IsAnimating || activeRoutine != null)
             {
                 return;
             }
 
             SetDrawButtonEnabled(false);
-            activeRoutine = StartCoroutine(DrawForPlayerRoutine());
+            activeRoutine = StartCoroutine(TestDrawForPlayerRoutine());
         }
 
         public void CompleteResourceExchange()
@@ -113,8 +119,17 @@ namespace FurrySocialCard.CardPresentation
         {
             if (CurrentPhase != Phase.EnemyAttack) return;
             UntapAllEnemyResources();
-            SetPhase(Phase.PlayerDraw);
-            SetDrawButtonEnabled(deckController != null && deckController.RemainingCount > 0);
+            SetDrawButtonEnabled(false);
+            activeRoutine = StartCoroutine(BeginPlayerTurnRoutine());
+        }
+
+        public IEnumerator ShowTurnInfo(string message)
+        {
+            if (turnInfoObject == null) yield break;
+            if (turnInfoText != null) turnInfoText.text = message;
+            turnInfoObject.SetActive(true);
+            if (turnInfoSeconds > 0f) yield return new WaitForSeconds(turnInfoSeconds);
+            turnInfoObject.SetActive(false);
         }
 
         public bool TryDrawDefinition(out CardDefinition definition)
@@ -342,15 +357,27 @@ namespace FurrySocialCard.CardPresentation
             EnemyResourceCardsChanged?.Invoke();
         }
 
-        private IEnumerator DrawForPlayerRoutine()
+        private IEnumerator BeginPlayerTurnRoutine()
         {
+            SetPhase(Phase.PlayerDraw);
+            yield return ShowTurnInfo("玩家回合");
             yield return DrawCardToZone(playerHandParent, Zone.Hand, null);
             SetPhase(Phase.ResourceExchange);
             activeRoutine = null;
+            SetDrawButtonEnabled(deckController != null && deckController.RemainingCount > 0);
+        }
+
+        private IEnumerator TestDrawForPlayerRoutine()
+        {
+            yield return DrawCardToZone(playerHandParent, Zone.Hand, null);
+            activeRoutine = null;
+            SetPhase(Phase.ResourceExchange);
+            SetDrawButtonEnabled(deckController != null && deckController.RemainingCount > 0);
         }
 
         private IEnumerator InitializeAndDeal()
         {
+            yield return ShowTurnInfo("遊戲開始");
             if (deckController == null)
             {
                 Debug.LogError("Deck Controller is missing.", this);
@@ -382,9 +409,9 @@ namespace FurrySocialCard.CardPresentation
             SetPhase(Phase.DealingPlayerHand);
             yield return DealCards(initialHandCards, playerHandParent, Zone.Hand);
 
-            SetPhase(Phase.PlayerDraw);
-            SetDrawButtonEnabled(deckController.RemainingCount > 0);
-            activeRoutine = null;
+            SetPhase(Phase.DealingEnemyHand);
+            yield return null;
+            yield return BeginPlayerTurnRoutine();
         }
 
         private IEnumerator DealCards(int count, RectTransform parent, Zone zone)
@@ -661,6 +688,7 @@ namespace FurrySocialCard.CardPresentation
             Initializing,
             DealingBattlefield,
             DealingPlayerHand,
+            DealingEnemyHand,
             PlayerDraw,
             ResourceExchange,
             AttackSelection,

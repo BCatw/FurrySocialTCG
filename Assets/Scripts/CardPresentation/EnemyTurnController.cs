@@ -63,7 +63,7 @@ namespace FurrySocialCard.CardPresentation
                 return;
             }
 
-            if (phase == PlayerTurnDealController.Phase.PlayerDraw && !initialHandReady)
+            if (phase == PlayerTurnDealController.Phase.DealingEnemyHand && !initialHandReady)
             {
                 DealInitialHand();
                 initialHandReady = true;
@@ -87,6 +87,7 @@ namespace FurrySocialCard.CardPresentation
 
         private IEnumerator RunTurn()
         {
+            yield return gameFlow.ShowTurnInfo("對手回合");
             if (gameFlow.TryDrawDefinition(out CardDefinition drawn)) hand.Add(drawn);
             if (decisionDelaySeconds > 0f) yield return new WaitForSeconds(decisionDelaySeconds);
 
