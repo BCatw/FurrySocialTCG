@@ -42,14 +42,22 @@ namespace FurrySocialCard.CardPresentation
             if (!LoadData()) return;
             BindTeam(playerCharacterGroups, playerTeam, true);
             BindTeam(enemyCharacterGroups, enemyTeam, false);
-            if (gameFlow != null) gameFlow.ResourceCardsChanged += RefreshSkillAvailability;
+            if (gameFlow != null)
+            {
+                gameFlow.ResourceCardsChanged += RefreshSkillAvailability;
+                gameFlow.EnemyResourceCardsChanged += RefreshSkillAvailability;
+            }
             if (attackSelection != null) attackSelection.AttackConfirmed += ResolveAttacks;
             RefreshSkillAvailability();
         }
 
         private void OnDestroy()
         {
-            if (gameFlow != null) gameFlow.ResourceCardsChanged -= RefreshSkillAvailability;
+            if (gameFlow != null)
+            {
+                gameFlow.ResourceCardsChanged -= RefreshSkillAvailability;
+                gameFlow.EnemyResourceCardsChanged -= RefreshSkillAvailability;
+            }
             if (attackSelection != null) attackSelection.AttackConfirmed -= ResolveAttacks;
         }
 
@@ -117,13 +125,15 @@ namespace FurrySocialCard.CardPresentation
         private void RefreshSkillAvailability()
         {
             if (gameFlow == null) return;
-            List<CardObject> available = gameFlow.GetAvailableResourceCardsSnapshot();
+            List<CardObject> playerResources = gameFlow.GetAvailableResourceCardsSnapshot();
+            List<CardObject> enemyResources = gameFlow.GetAvailableEnemyResourceCardsSnapshot();
             foreach (KeyValuePair<CharacterAttackTarget, CharacterCombatantView> pair in combatants)
             {
                 CharacterCombatantView view = pair.Value;
+                List<CardObject> available = view.IsAlly ? playerResources : enemyResources;
                 for (int index = 0; index < 3; index++)
                 {
-                    bool usable = view.IsAlly && TryGetSkill(view.Definition, index, out SkillDefinition skill) && IsUsable(skill, available);
+                    bool usable = TryGetSkill(view.Definition, index, out SkillDefinition skill) && IsUsable(skill, available);
                     view.SetSkillAvailable(index, usable);
                 }
             }
@@ -131,35 +141,41 @@ namespace FurrySocialCard.CardPresentation
 
         private void ResolveAttacks(IReadOnlyDictionary<CharacterAttackTarget, CharacterAttackTarget> attackTargets)
         {
-            if (gameFlow == null || attackTargets == null) return;
-            List<CardObject> resourceSnapshot = gameFlow.GetAvailableResourceCardsSnapshot();
+            ResolveAttacksForSide(playerCharacterGroups, attackTargets, true);
+        }
+
+        public void ResolveEnemyAttacks(IReadOnlyDictionary<CharacterAttackTarget, CharacterAttackTarget> attackTargets)
+        {
+            ResolveAttacksForSide(enemyCharacterGroups, attackTargets, false);
+        }
+
+        private void ResolveAttacksForSide(Transform attackerGroup, IReadOnlyDictionary<CharacterAttackTarget, CharacterAttackTarget> attackTargets, bool isPlayer)
+        {
+            if (gameFlow == null || attackerGroup == null || attackTargets == null) return;
+            List<CardObject> resourceSnapshot = isPlayer
+                ? gameFlow.GetAvailableResourceCardsSnapshot()
+                : gameFlow.GetAvailableEnemyResourceCardsSnapshot();
             var executions = new List<SkillExecution>();
 
-            if (playerCharacterGroups != null)
+            for (int childIndex = 0; childIndex < attackerGroup.childCount; childIndex++)
             {
-                for (int childIndex = 0; childIndex < playerCharacterGroups.childCount; childIndex++)
+                CharacterAttackTarget attacker = attackerGroup.GetChild(childIndex).GetComponent<CharacterAttackTarget>();
+                if (attacker == null || !attackTargets.TryGetValue(attacker, out CharacterAttackTarget target)) continue;
+                if (!combatants.TryGetValue(attacker, out CharacterCombatantView attackerView) || !combatants.TryGetValue(target, out CharacterCombatantView targetView)) continue;
+                for (int skillIndex = 0; skillIndex < 3; skillIndex++)
                 {
-                    CharacterAttackTarget attacker = playerCharacterGroups.GetChild(childIndex).GetComponent<CharacterAttackTarget>();
-                    if (attacker == null || !attackTargets.TryGetValue(attacker, out CharacterAttackTarget target)) continue;
-                    if (!combatants.TryGetValue(attacker, out CharacterCombatantView attackerView) || !combatants.TryGetValue(target, out CharacterCombatantView targetView)) continue;
-                    for (int skillIndex = 0; skillIndex < 3; skillIndex++)
+                    if (TryGetSkill(attackerView.Definition, skillIndex, out SkillDefinition skill) && IsUsable(skill, resourceSnapshot))
                     {
-                        if (TryGetSkill(attackerView.Definition, skillIndex, out SkillDefinition skill) && IsUsable(skill, resourceSnapshot))
-                        {
-                            executions.Add(new SkillExecution(attackerView, targetView, skill));
-                        }
+                        executions.Add(new SkillExecution(attackerView, targetView, skill));
                     }
                 }
             }
 
-            foreach (SkillExecution execution in executions)
-            {
-                ExecuteSkill(execution, resourceSnapshot);
-            }
+            foreach (SkillExecution execution in executions) ExecuteSkill(execution, resourceSnapshot, isPlayer);
             RefreshSkillAvailability();
         }
 
-        private void ExecuteSkill(SkillExecution execution, List<CardObject> resourceSnapshot)
+        private void ExecuteSkill(SkillExecution execution, List<CardObject> resourceSnapshot, bool isPlayer)
         {
             foreach (string effectId in execution.Skill.effectIds)
             {
@@ -185,8 +201,16 @@ namespace FurrySocialCard.CardPresentation
 
             if (!TryGetRequirements(execution.Skill, out List<PatternRequirement> requirements)) return;
             List<CardObject> usedCards = SelectRequiredCards(requirements, resourceSnapshot);
-            if (string.Equals(execution.Skill.resourceBehavior, "Tap", StringComparison.OrdinalIgnoreCase)) gameFlow.TapResources(usedCards);
-            else if (string.Equals(execution.Skill.resourceBehavior, "Consume", StringComparison.OrdinalIgnoreCase)) gameFlow.ConsumeResources(usedCards);
+            if (string.Equals(execution.Skill.resourceBehavior, "Tap", StringComparison.OrdinalIgnoreCase))
+            {
+                if (isPlayer) gameFlow.TapResources(usedCards);
+                else gameFlow.TapEnemyResources(usedCards);
+            }
+            else if (string.Equals(execution.Skill.resourceBehavior, "Consume", StringComparison.OrdinalIgnoreCase))
+            {
+                if (isPlayer) gameFlow.ConsumeResources(usedCards);
+                else gameFlow.ConsumeEnemyResources(usedCards);
+            }
         }
 
         private bool IsUsable(SkillDefinition skill, List<CardObject> resources)

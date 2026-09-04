@@ -14,6 +14,10 @@ namespace FurrySocialCard.CardPresentation
         [Tooltip("每次手牌成功吃牌後，最多可以連續補幾張牌；設為 0 時不補牌。")]
         [SerializeField, Min(0)] private int maxChainDrawsPerTurn = 3;
 
+        public MatchRule CurrentMatchRule => matchRule;
+        public int MaxChainDrawsPerTurn => maxChainDrawsPerTurn;
+        public float ChainDrawIntervalSeconds => chainDrawIntervalSeconds;
+
         private readonly List<CardObject> candidates = new List<CardObject>();
         private CardObject selectedHandCard;
         private CardObject pendingDrawnCard;
@@ -38,14 +42,18 @@ namespace FurrySocialCard.CardPresentation
             {
                 gameFlow.PhaseChanged -= HandlePhaseChanged;
             }
+            ClearAllMatchHints();
         }
 
         private void HandlePhaseChanged(PlayerTurnDealController.Phase phase)
         {
             if (phase == PlayerTurnDealController.Phase.ResourceExchange)
             {
+                RefreshHandMatchHints();
                 return;
             }
+
+            ClearAllMatchHints();
 
             if (exchangeRoutine != null)
             {
@@ -126,6 +134,7 @@ namespace FurrySocialCard.CardPresentation
         private IEnumerator ResolvePlay(Vector2 clickScreenPosition, Camera eventCamera)
         {
             CardObject playedCard = selectedHandCard;
+            playedCard?.SetMatchHint(false);
             FindCandidates(playedCard, playedCard, candidates);
             CardObject eatenCard = ChooseCandidate(candidates, clickScreenPosition, eventCamera);
             ClearSelection();
@@ -249,6 +258,34 @@ namespace FurrySocialCard.CardPresentation
             {
                 fieldCard?.SetDimmed(false);
             }
+        }
+
+        private void RefreshHandMatchHints()
+        {
+            if (gameFlow == null) return;
+            foreach (CardObject handCard in gameFlow.HandCards)
+            {
+                bool hasMatch = false;
+                if (handCard != null)
+                {
+                    foreach (CardObject fieldCard in gameFlow.BattlefieldCards)
+                    {
+                        if (fieldCard != null && CanEat(handCard.Definition, fieldCard.Definition, matchRule))
+                        {
+                            hasMatch = true;
+                            break;
+                        }
+                    }
+                    handCard.SetMatchHint(hasMatch);
+                }
+            }
+        }
+
+        private void ClearAllMatchHints()
+        {
+            if (gameFlow == null) return;
+            foreach (CardObject handCard in gameFlow.HandCards) handCard?.SetMatchHint(false);
+            foreach (CardObject fieldCard in gameFlow.BattlefieldCards) fieldCard?.SetMatchHint(false);
         }
 
         private void FindCandidates(CardObject source, CardObject excluded, List<CardObject> results)

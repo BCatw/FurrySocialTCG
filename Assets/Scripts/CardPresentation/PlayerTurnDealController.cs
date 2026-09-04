@@ -16,6 +16,8 @@ namespace FurrySocialCard.CardPresentation
         [SerializeField] private RectTransform battlefieldParent;
         [SerializeField] private RectTransform playerHandParent;
         [SerializeField] private RectTransform resourceParent;
+        [Tooltip("Optional. If empty, an enemy resource row is created opposite the player Resource row at runtime.")]
+        [SerializeField] private RectTransform enemyResourceParent;
         [SerializeField] private Button startButton;
         [SerializeField] private Button drawButton;
         [SerializeField, Min(0f)] private float deckRevealSeconds = 0.5f;
@@ -31,15 +33,19 @@ namespace FurrySocialCard.CardPresentation
         private readonly List<CardObject> handCards = new List<CardObject>();
         private readonly List<CardObject> resourceCards = new List<CardObject>();
         private readonly HashSet<CardObject> tappedResourceCards = new HashSet<CardObject>();
+        private readonly List<CardObject> enemyResourceCards = new List<CardObject>();
+        private readonly HashSet<CardObject> tappedEnemyResourceCards = new HashSet<CardObject>();
         private Coroutine activeRoutine;
 
         public Phase CurrentPhase { get; private set; } = Phase.WaitingForStart;
         public IReadOnlyList<CardObject> BattlefieldCards => battlefieldCards;
         public IReadOnlyList<CardObject> HandCards => handCards;
         public IReadOnlyList<CardObject> ResourceCards => resourceCards;
+        public IReadOnlyList<CardObject> EnemyResourceCards => enemyResourceCards;
         public bool IsAnimating { get; private set; }
         public event Action<Phase> PhaseChanged;
         public event Action ResourceCardsChanged;
+        public event Action EnemyResourceCardsChanged;
 
         private void Awake()
         {
@@ -97,8 +103,24 @@ namespace FurrySocialCard.CardPresentation
             }
 
             UntapAllResources();
+            SetPhase(Phase.EnemyDraw);
+        }
+
+        public void BeginEnemyResourceExchange() => SetPhase(Phase.EnemyResourceExchange);
+        public void BeginEnemyAttack() => SetPhase(Phase.EnemyAttack);
+
+        public void CompleteEnemyTurn()
+        {
+            if (CurrentPhase != Phase.EnemyAttack) return;
+            UntapAllEnemyResources();
             SetPhase(Phase.PlayerDraw);
             SetDrawButtonEnabled(deckController != null && deckController.RemainingCount > 0);
+        }
+
+        public bool TryDrawDefinition(out CardDefinition definition)
+        {
+            definition = null;
+            return deckController != null && deckController.TryDraw(out definition);
         }
 
         public List<CardObject> GetAvailableResourceCardsSnapshot()
@@ -107,6 +129,16 @@ namespace FurrySocialCard.CardPresentation
             foreach (CardObject card in resourceCards)
             {
                 if (card != null && !tappedResourceCards.Contains(card)) result.Add(card);
+            }
+            return result;
+        }
+
+        public List<CardObject> GetAvailableEnemyResourceCardsSnapshot()
+        {
+            var result = new List<CardObject>();
+            foreach (CardObject card in enemyResourceCards)
+            {
+                if (card != null && !tappedEnemyResourceCards.Contains(card)) result.Add(card);
             }
             return result;
         }
@@ -145,11 +177,52 @@ namespace FurrySocialCard.CardPresentation
             }
         }
 
+        public void TapEnemyResources(IEnumerable<CardObject> cards)
+        {
+            if (cards == null) return;
+            foreach (CardObject card in cards)
+            {
+                if (card != null && enemyResourceCards.Contains(card))
+                {
+                    tappedEnemyResourceCards.Add(card);
+                    card.SetDimmed(true);
+                }
+            }
+            EnemyResourceCardsChanged?.Invoke();
+        }
+
+        public void ConsumeEnemyResources(IEnumerable<CardObject> cards)
+        {
+            if (cards == null) return;
+            bool changed = false;
+            foreach (CardObject card in new List<CardObject>(cards))
+            {
+                if (card == null || !enemyResourceCards.Remove(card)) continue;
+                tappedEnemyResourceCards.Remove(card);
+                spawnedCards.Remove(card);
+                card.transform.DOKill();
+                Destroy(card.gameObject);
+                changed = true;
+            }
+            if (changed)
+            {
+                ReflowEnemyResource();
+                EnemyResourceCardsChanged?.Invoke();
+            }
+        }
+
         private void UntapAllResources()
         {
             foreach (CardObject card in tappedResourceCards) card?.SetDimmed(false);
             tappedResourceCards.Clear();
             ResourceCardsChanged?.Invoke();
+        }
+
+        private void UntapAllEnemyResources()
+        {
+            foreach (CardObject card in tappedEnemyResourceCards) card?.SetDimmed(false);
+            tappedEnemyResourceCards.Clear();
+            EnemyResourceCardsChanged?.Invoke();
         }
 
         public IEnumerator DrawToBattlefield(Action<CardObject> completed)
@@ -213,6 +286,60 @@ namespace FurrySocialCard.CardPresentation
             ReflowResource();
             IsAnimating = false;
             ResourceCardsChanged?.Invoke();
+        }
+
+        public IEnumerator RevealEnemyCardToBattlefield(CardDefinition definition, Action<CardObject> completed)
+        {
+            CardObject card = CreateCardAtDeck(definition);
+            if (card == null) { completed?.Invoke(null); yield break; }
+            battlefieldCards.Add(card);
+            IsAnimating = true;
+            if (deckRevealSeconds > 0f) yield return new WaitForSeconds(deckRevealSeconds);
+            yield return AnimateExistingCardToParent(card, battlefieldParent, Zone.Battlefield);
+            IsAnimating = false;
+            completed?.Invoke(card);
+        }
+
+        public IEnumerator RevealEnemyCardToResource(CardDefinition definition, CardObject eaten, Action<CardObject> completed)
+        {
+            CardObject card = CreateCardAtDeck(definition);
+            if (card == null || eaten == null) { completed?.Invoke(null); yield break; }
+            IsAnimating = true;
+            if (deckRevealSeconds > 0f) yield return new WaitForSeconds(deckRevealSeconds);
+            yield return MoveCardsToEnemyResourceAnimated(card, eaten);
+            IsAnimating = false;
+            completed?.Invoke(card);
+        }
+
+        public IEnumerator MoveCardsToEnemyResourceAnimated(CardObject first, CardObject second)
+        {
+            if (first == null || second == null) yield break;
+            EnsureEnemyResourceParent();
+            Vector3 firstStart = first.transform.position;
+            Vector3 secondStart = second.transform.position;
+            RegisterAsEnemyResource(first);
+            RegisterAsEnemyResource(second);
+            RectTransform firstRect = PrepareEnemyDestination(first, out Vector3 firstTarget);
+            RectTransform secondRect = PrepareEnemyDestination(second, out Vector3 secondTarget);
+            ReflowEnemyResource();
+            Canvas.ForceUpdateCanvases();
+            firstTarget = firstRect.position;
+            secondTarget = secondRect.position;
+            RectTransform animationParent = GetAnimationParent();
+            firstRect.SetParent(animationParent, true);
+            secondRect.SetParent(animationParent, true);
+            firstRect.position = firstStart;
+            secondRect.position = secondStart;
+            IsAnimating = true;
+            Sequence sequence = DOTween.Sequence().SetLink(gameObject);
+            sequence.Join(firstRect.DOMove(firstTarget, cardMoveDurationSeconds).SetEase(Ease.InOutQuad));
+            sequence.Join(secondRect.DOMove(secondTarget, cardMoveDurationSeconds).SetEase(Ease.InOutQuad));
+            yield return sequence.WaitForCompletion();
+            if (first != null) FinishAtParent(first, enemyResourceParent);
+            if (second != null) FinishAtParent(second, enemyResourceParent);
+            ReflowEnemyResource();
+            IsAnimating = false;
+            EnemyResourceCardsChanged?.Invoke();
         }
 
         private IEnumerator DrawForPlayerRoutine()
@@ -313,11 +440,29 @@ namespace FurrySocialCard.CardPresentation
                 return null;
             }
 
+            return CreateCardAtDeck(definition);
+        }
+
+        private CardObject CreateCardAtDeck(CardDefinition definition)
+        {
+            if (definition == null || cardPrefab == null || deckDisplayParent == null) return null;
             CardObject card = Instantiate(cardPrefab, deckDisplayParent);
             FinishAtParent(card, deckDisplayParent);
             card.Bind(definition);
             spawnedCards.Add(card);
             return card;
+        }
+
+        private RectTransform PrepareEnemyDestination(CardObject card, out Vector3 targetPosition)
+        {
+            RectTransform rect = card.transform as RectTransform;
+            rect.SetParent(enemyResourceParent, false);
+            rect.localScale = Vector3.one;
+            rect.localRotation = Quaternion.identity;
+            ReflowEnemyResource();
+            Canvas.ForceUpdateCanvases();
+            targetPosition = rect.position;
+            return rect;
         }
 
         private IEnumerator AnimateExistingCardToParent(CardObject card, RectTransform destination, Zone zone)
@@ -388,6 +533,27 @@ namespace FurrySocialCard.CardPresentation
             ReflowHand();
         }
 
+        private void RegisterAsEnemyResource(CardObject card)
+        {
+            battlefieldCards.Remove(card);
+            if (!enemyResourceCards.Contains(card)) enemyResourceCards.Add(card);
+            card.SetSelected(false);
+            card.SetDimmed(false);
+        }
+
+        private void EnsureEnemyResourceParent()
+        {
+            if (enemyResourceParent != null || resourceParent == null) return;
+            var holder = new GameObject("EnemyResource", typeof(RectTransform));
+            enemyResourceParent = holder.GetComponent<RectTransform>();
+            enemyResourceParent.SetParent(resourceParent.parent, false);
+            enemyResourceParent.anchorMin = resourceParent.anchorMin;
+            enemyResourceParent.anchorMax = resourceParent.anchorMax;
+            enemyResourceParent.pivot = resourceParent.pivot;
+            enemyResourceParent.sizeDelta = resourceParent.sizeDelta;
+            enemyResourceParent.anchoredPosition = new Vector2(resourceParent.anchoredPosition.x, -resourceParent.anchoredPosition.y);
+        }
+
         private void ReflowZone(Zone zone)
         {
             if (zone == Zone.Hand)
@@ -425,6 +591,11 @@ namespace FurrySocialCard.CardPresentation
             ReflowCards(resourceCards, resourceCardSpacing);
         }
 
+        private void ReflowEnemyResource()
+        {
+            ReflowCards(enemyResourceCards, resourceCardSpacing);
+        }
+
         private static void ReflowCards(IReadOnlyList<CardObject> cards, float spacing)
         {
             float left = (cards.Count - 1) * spacing * -0.5f;
@@ -457,7 +628,10 @@ namespace FurrySocialCard.CardPresentation
             handCards.Clear();
             resourceCards.Clear();
             tappedResourceCards.Clear();
+            enemyResourceCards.Clear();
+            tappedEnemyResourceCards.Clear();
             ResourceCardsChanged?.Invoke();
+            EnemyResourceCardsChanged?.Invoke();
         }
 
         private void SetDrawButtonEnabled(bool enabled)
@@ -489,7 +663,10 @@ namespace FurrySocialCard.CardPresentation
             DealingPlayerHand,
             PlayerDraw,
             ResourceExchange,
-            AttackSelection
+            AttackSelection,
+            EnemyDraw,
+            EnemyResourceExchange,
+            EnemyAttack
         }
     }
 }

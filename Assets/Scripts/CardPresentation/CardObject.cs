@@ -11,6 +11,7 @@ namespace FurrySocialCard.CardPresentation
     public sealed class CardObject : MonoBehaviour, IPointerClickHandler
     {
         [SerializeField] private Image backgroundImage;
+        [SerializeField] private Outline matchOutline;
         [SerializeField] private Image iconImage;
         [SerializeField] private TMP_Text pointText;
 
@@ -33,6 +34,7 @@ namespace FurrySocialCard.CardPresentation
             FindReferences();
             SetSelected(false);
             SetDimmed(false);
+            SetMatchHint(false);
             gameObject.name = $"Card_{definition.id}";
             gameObject.SetActive(true);
 
@@ -67,6 +69,12 @@ namespace FurrySocialCard.CardPresentation
             transform.localScale = selected ? Vector3.one * 1.12f : Vector3.one;
         }
 
+        public void SetMatchHint(bool visible)
+        {
+            FindReferences();
+            if (matchOutline != null) matchOutline.enabled = visible;
+        }
+
         public void SetDimmed(bool dimmed)
         {
             CanvasGroup group = GetComponent<CanvasGroup>();
@@ -84,6 +92,11 @@ namespace FurrySocialCard.CardPresentation
             {
                 Transform background = transform.Find("Scaler/Image");
                 backgroundImage = background != null ? background.GetComponent<Image>() : null;
+            }
+
+            if (matchOutline == null && backgroundImage != null)
+            {
+                matchOutline = backgroundImage.GetComponent<Outline>();
             }
 
             if (iconImage == null)

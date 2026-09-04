@@ -61,9 +61,10 @@ namespace FurrySocialCard.CardPresentation
         private void HandlePhaseChanged(PlayerTurnDealController.Phase phase)
         {
             bool isAttackSelection = phase == PlayerTurnDealController.Phase.AttackSelection;
+            bool isEnemyAttack = phase == PlayerTurnDealController.Phase.EnemyAttack;
             if (cardGameGroup != null)
             {
-                bool showCards = !isAttackSelection;
+                bool showCards = !isAttackSelection && !isEnemyAttack;
                 cardGameGroup.SetActive(showCards);
             }
             if (attackEndButton != null) attackEndButton.gameObject.SetActive(isAttackSelection);
