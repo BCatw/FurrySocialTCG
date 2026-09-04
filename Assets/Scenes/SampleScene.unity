@@ -691,7 +691,7 @@ MonoBehaviour:
   cardMoveDurationSeconds: 0.01
   dealIntervalSeconds: 0.12
   initialBattlefieldCards: 10
-  initialHandCards: 8
+  initialHandCards: 3
   handCardSpacing: 115
   resourceCardSpacing: 115
 --- !u!114 &533434921
@@ -756,7 +756,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   gameFlow: {fileID: 533434920}
-  matchRule: 3
+  matchRule: 2
   chainDrawIntervalSeconds: 0.18
   maxChainDrawsPerTurn: 1
 --- !u!114 &533434925
