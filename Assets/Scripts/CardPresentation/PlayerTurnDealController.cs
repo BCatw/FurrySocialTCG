@@ -101,9 +101,14 @@ namespace FurrySocialCard.CardPresentation
             SetPhase(Phase.AttackSelection);
         }
 
+        public void BeginAttackPerformance()
+        {
+            if (CurrentPhase == Phase.AttackSelection) SetPhase(Phase.AttackPerformance);
+        }
+
         public void CompleteAttackSelection()
         {
-            if (CurrentPhase != Phase.AttackSelection)
+            if (CurrentPhase != Phase.AttackPerformance)
             {
                 return;
             }
@@ -113,11 +118,13 @@ namespace FurrySocialCard.CardPresentation
         }
 
         public void BeginEnemyResourceExchange() => SetPhase(Phase.EnemyResourceExchange);
-        public void BeginEnemyAttack() => SetPhase(Phase.EnemyAttack);
+        public void BeginEnemyRefill() => SetPhase(Phase.EnemyRefill);
+        public void BeginEnemyAttackSelection() => SetPhase(Phase.EnemyAttackSelection);
+        public void BeginEnemyAttackPerformance() => SetPhase(Phase.EnemyAttackPerformance);
 
         public void CompleteEnemyTurn()
         {
-            if (CurrentPhase != Phase.EnemyAttack) return;
+            if (CurrentPhase != Phase.EnemyAttackPerformance) return;
             UntapAllEnemyResources();
             SetDrawButtonEnabled(false);
             activeRoutine = StartCoroutine(BeginPlayerTurnRoutine());
@@ -692,9 +699,12 @@ namespace FurrySocialCard.CardPresentation
             PlayerDraw,
             ResourceExchange,
             AttackSelection,
+            AttackPerformance,
             EnemyDraw,
             EnemyResourceExchange,
-            EnemyAttack
+            EnemyRefill,
+            EnemyAttackSelection,
+            EnemyAttackPerformance
         }
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using FurrySocialCard.CardData;
@@ -17,6 +18,8 @@ namespace FurrySocialCard.CardPresentation
         public MatchRule CurrentMatchRule => matchRule;
         public int MaxChainDrawsPerTurn => maxChainDrawsPerTurn;
         public float ChainDrawIntervalSeconds => chainDrawIntervalSeconds;
+        public event Action RefillStarted;
+        public event Action RefillCompleted;
 
         private readonly List<CardObject> candidates = new List<CardObject>();
         private CardObject selectedHandCard;
@@ -148,7 +151,9 @@ namespace FurrySocialCard.CardPresentation
             }
 
             yield return gameFlow.MoveCardsToResourceAnimated(playedCard, eatenCard);
+            RefillStarted?.Invoke();
             yield return ResolveChainDraws();
+            RefillCompleted?.Invoke();
             exchangeRoutine = null;
             gameFlow.CompleteResourceExchange();
         }

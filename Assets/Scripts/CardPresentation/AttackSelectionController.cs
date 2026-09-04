@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -15,6 +16,7 @@ namespace FurrySocialCard.CardPresentation
         [SerializeField] private Button attackEndButton;
         [SerializeField, Min(1f)] private float lineWidth = 12f;
         [SerializeField] private Color lineColor = new Color(1f, 0.25f, 0.3f, 0.9f);
+        [SerializeField, Min(0f)] private float attackPerformanceSeconds = 0.5f;
 
         private readonly List<CharacterAttackTarget> allies = new List<CharacterAttackTarget>();
         private readonly List<CharacterAttackTarget> enemies = new List<CharacterAttackTarget>();
@@ -61,10 +63,12 @@ namespace FurrySocialCard.CardPresentation
         private void HandlePhaseChanged(PlayerTurnDealController.Phase phase)
         {
             bool isAttackSelection = phase == PlayerTurnDealController.Phase.AttackSelection;
-            bool isEnemyAttack = phase == PlayerTurnDealController.Phase.EnemyAttack;
+            bool isAttackPerformance = phase == PlayerTurnDealController.Phase.AttackPerformance;
+            bool isEnemyAttack = phase == PlayerTurnDealController.Phase.EnemyAttackSelection
+                || phase == PlayerTurnDealController.Phase.EnemyAttackPerformance;
             if (cardGameGroup != null)
             {
-                bool showCards = !isAttackSelection && !isEnemyAttack;
+                bool showCards = !isAttackSelection && !isAttackPerformance && !isEnemyAttack;
                 cardGameGroup.SetActive(showCards);
             }
             if (attackEndButton != null) attackEndButton.gameObject.SetActive(isAttackSelection);
@@ -95,9 +99,21 @@ namespace FurrySocialCard.CardPresentation
         private void CompleteAttackSelection()
         {
             if (gameFlow == null || gameFlow.CurrentPhase != PlayerTurnDealController.Phase.AttackSelection) return;
+            StartCoroutine(CompleteAttackSelectionRoutine());
+        }
+
+        private IEnumerator CompleteAttackSelectionRoutine()
+        {
+            if (attackEndButton != null) attackEndButton.interactable = false;
             AttackConfirmed?.Invoke(targets);
             ClearSelection();
-            gameFlow.CompleteAttackSelection();
+            gameFlow.BeginAttackPerformance();
+            if (attackPerformanceSeconds > 0f) yield return new WaitForSeconds(attackPerformanceSeconds);
+            if (gameFlow.CurrentPhase == PlayerTurnDealController.Phase.AttackPerformance)
+            {
+                gameFlow.CompleteAttackSelection();
+            }
+            if (attackEndButton != null) attackEndButton.interactable = true;
         }
 
         private void ConfigureCharacters(Transform group, bool isAlly, List<CharacterAttackTarget> destination)

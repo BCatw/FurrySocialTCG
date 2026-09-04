@@ -107,12 +107,13 @@ namespace FurrySocialCard.CardPresentation
                 {
                     CardObject eaten = candidates[random.Next(candidates.Count)];
                     yield return gameFlow.RevealEnemyCardToResource(played, eaten, null);
+                    gameFlow.BeginEnemyRefill();
                     yield return RunChainDraws();
                 }
             }
 
             if (decisionDelaySeconds > 0f) yield return new WaitForSeconds(decisionDelaySeconds);
-            gameFlow.BeginEnemyAttack();
+            gameFlow.BeginEnemyAttackSelection();
             BuildRandomAttacks();
             CreateLines();
 
@@ -124,6 +125,7 @@ namespace FurrySocialCard.CardPresentation
                 yield return null;
             }
 
+            gameFlow.BeginEnemyAttackPerformance();
             characterBattle?.ResolveEnemyAttacks(attackTargets);
             attackTargets.Clear();
             ClearLines();
