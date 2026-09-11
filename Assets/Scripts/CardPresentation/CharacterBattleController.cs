@@ -1,10 +1,14 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using FurrySocialCard.CardData;
 using FurrySocialCard.CharacterData;
+using DG.Tweening;
+using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace FurrySocialCard.CardPresentation
 {
@@ -29,6 +33,17 @@ namespace FurrySocialCard.CardPresentation
         [SerializeField] private Transform playerCharacterGroups;
         [SerializeField] private Transform enemyCharacterGroups;
 
+        [Header("Attack Performance")]
+        [SerializeField] private GameObject skillGroup;
+        [SerializeField] private TMP_Text skillNameText;
+        [SerializeField, Min(0.01f)] private float singleAttackSeconds = 1f;
+        [SerializeField, Min(0f)] private float attackIntervalSeconds = 0.5f;
+        [SerializeField, Min(0f)] private float attackLungeDistance = 120f;
+        [SerializeField, Min(0f)] private float hitShakeStrength = 24f;
+        [SerializeField, Min(2)] private int hitShakeVibrato = 8;
+        [SerializeField, Min(0f)] private float skillTransitionSeconds = 0.2f;
+        [SerializeField, Min(0f)] private float skillHoldSeconds = 0.5f;
+        [SerializeField, Min(0.1f)] private float maximumSkillPerformanceSeconds = 1.5f;
         private readonly Dictionary<string, CharacterDefinition> characters = new Dictionary<string, CharacterDefinition>();
         private readonly Dictionary<string, SkillDefinition> skills = new Dictionary<string, SkillDefinition>();
         private readonly Dictionary<string, EffectDefinition> effects = new Dictionary<string, EffectDefinition>();
@@ -47,7 +62,6 @@ namespace FurrySocialCard.CardPresentation
                 gameFlow.ResourceCardsChanged += RefreshSkillAvailability;
                 gameFlow.EnemyResourceCardsChanged += RefreshSkillAvailability;
             }
-            if (attackSelection != null) attackSelection.AttackConfirmed += ResolveAttacks;
             RefreshSkillAvailability();
         }
 
@@ -58,7 +72,6 @@ namespace FurrySocialCard.CardPresentation
                 gameFlow.ResourceCardsChanged -= RefreshSkillAvailability;
                 gameFlow.EnemyResourceCardsChanged -= RefreshSkillAvailability;
             }
-            if (attackSelection != null) attackSelection.AttackConfirmed -= ResolveAttacks;
         }
 
         private bool LoadData()
@@ -141,43 +154,108 @@ namespace FurrySocialCard.CardPresentation
             }
         }
 
-        private void ResolveAttacks(IReadOnlyDictionary<CharacterAttackTarget, CharacterAttackTarget> attackTargets)
+        public IEnumerator PlayAttackSequence(
+            IReadOnlyList<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>> assignments,
+            bool isPlayer)
         {
-            ResolveAttacksForSide(playerCharacterGroups, attackTargets, true);
-        }
+            if (gameFlow == null || assignments == null || assignments.Count == 0) yield break;
 
-        public void ResolveEnemyAttacks(IReadOnlyDictionary<CharacterAttackTarget, CharacterAttackTarget> attackTargets)
-        {
-            ResolveAttacksForSide(enemyCharacterGroups, attackTargets, false);
-        }
-
-        private void ResolveAttacksForSide(Transform attackerGroup, IReadOnlyDictionary<CharacterAttackTarget, CharacterAttackTarget> attackTargets, bool isPlayer)
-        {
-            if (gameFlow == null || attackerGroup == null || attackTargets == null) return;
             List<CardObject> resourceSnapshot = isPlayer
                 ? gameFlow.GetAvailableResourceCardsSnapshot()
                 : gameFlow.GetAvailableEnemyResourceCardsSnapshot();
-            var executions = new List<SkillExecution>();
+            var plans = new List<AttackPlan>();
 
-            for (int childIndex = 0; childIndex < attackerGroup.childCount; childIndex++)
+            foreach (KeyValuePair<CharacterAttackTarget, CharacterAttackTarget> assignment in assignments)
             {
-                Transform character = CharacterSlotUtility.ResolveCharacter(attackerGroup.GetChild(childIndex));
-                CharacterAttackTarget attacker = character != null ? character.GetComponent<CharacterAttackTarget>() : null;
-                if (attacker == null || !attackTargets.TryGetValue(attacker, out CharacterAttackTarget target)) continue;
-                if (!combatants.TryGetValue(attacker, out CharacterCombatantView attackerView) || !combatants.TryGetValue(target, out CharacterCombatantView targetView)) continue;
+                if (assignment.Key == null || assignment.Value == null) continue;
+                if (!combatants.TryGetValue(assignment.Key, out CharacterCombatantView attackerView)
+                    || !combatants.TryGetValue(assignment.Value, out CharacterCombatantView targetView)) continue;
+
+                var availableSkills = new List<SkillDefinition>();
                 for (int skillIndex = 0; skillIndex < 3; skillIndex++)
                 {
-                    if (TryGetSkill(attackerView.Definition, skillIndex, out SkillDefinition skill) && IsUsable(skill, resourceSnapshot))
+                    if (TryGetSkill(attackerView.Definition, skillIndex, out SkillDefinition skill)
+                        && IsUsable(skill, resourceSnapshot))
                     {
-                        executions.Add(new SkillExecution(attackerView, targetView, skill));
+                        availableSkills.Add(skill);
                     }
                 }
+                plans.Add(new AttackPlan(assignment.Key, assignment.Value, attackerView, targetView, availableSkills));
             }
 
-            foreach (SkillExecution execution in executions) ExecuteSkill(execution, resourceSnapshot, isPlayer);
-            RefreshSkillAvailability();
+            for (int planIndex = 0; planIndex < plans.Count; planIndex++)
+            {
+                AttackPlan plan = plans[planIndex];
+                foreach (SkillDefinition skill in plan.Skills)
+                {
+                    yield return ShowSkillPerformance(skill.displayName);
+                }
+
+                Tween attackTween = plan.AttackerTarget.CreateAttackTween(
+                    plan.TargetTarget,
+                    attackLungeDistance,
+                    singleAttackSeconds,
+                    hitShakeStrength,
+                    hitShakeVibrato,
+                    () =>
+                    {
+                        foreach (SkillDefinition skill in plan.Skills)
+                        {
+                            ExecuteSkill(new SkillExecution(plan.AttackerView, plan.TargetView, skill), resourceSnapshot, isPlayer);
+                        }
+                        RefreshSkillAvailability();
+                    });
+                if (attackTween != null) yield return attackTween.WaitForCompletion();
+
+                if (planIndex < plans.Count - 1 && attackIntervalSeconds > 0f)
+                {
+                    yield return new WaitForSeconds(attackIntervalSeconds);
+                }
+            }
         }
 
+        private IEnumerator ShowSkillPerformance(string skillName)
+        {
+            if (skillGroup == null) yield break;
+            if (skillNameText != null) skillNameText.text = skillName ?? string.Empty;
+
+            CanvasGroup canvasGroup = skillGroup.GetComponent<CanvasGroup>();
+            if (canvasGroup == null) canvasGroup = skillGroup.AddComponent<CanvasGroup>();
+            RectTransform rect = skillGroup.transform as RectTransform;
+            Vector3 baseScale = rect != null ? rect.localScale : Vector3.one;
+
+            float maximum = Mathf.Max(0.1f, maximumSkillPerformanceSeconds);
+            float hold = Mathf.Min(Mathf.Max(0f, skillHoldSeconds), maximum);
+            float transition = Mathf.Min(Mathf.Max(0f, skillTransitionSeconds), Mathf.Max(0f, (maximum - hold) * 0.5f));
+
+            skillGroup.SetActive(true);
+            DOTween.Kill(skillGroup);
+            canvasGroup.alpha = 0f;
+            if (rect != null) rect.localScale = baseScale * 0.9f;
+
+            Sequence sequence = DOTween.Sequence().SetLink(skillGroup);
+            sequence.Append(TweenCanvasAlpha(canvasGroup, 1f, transition, Ease.OutQuad));
+            if (rect != null) sequence.Join(TweenScale(rect, baseScale, transition, Ease.OutBack));
+            if (hold > 0f) sequence.AppendInterval(hold);
+            sequence.Append(TweenCanvasAlpha(canvasGroup, 0f, transition, Ease.InQuad));
+            if (rect != null) sequence.Join(TweenScale(rect, baseScale * 1.05f, transition, Ease.InQuad));
+            yield return sequence.WaitForCompletion();
+
+            canvasGroup.alpha = 1f;
+            if (rect != null) rect.localScale = baseScale;
+            skillGroup.SetActive(false);
+        }
+        private static Tween TweenCanvasAlpha(CanvasGroup target, float destination, float duration, Ease ease)
+        {
+            return DOTween.To(() => target.alpha, value => target.alpha = value, destination, Mathf.Max(0f, duration))
+                .SetEase(ease);
+        }
+
+        private static Tween TweenScale(RectTransform target, Vector3 destination, float duration, Ease ease)
+        {
+            return DOTween.To(() => target.localScale, value => target.localScale = value, destination, Mathf.Max(0f, duration))
+                .SetEase(ease);
+        }
         private void ExecuteSkill(SkillExecution execution, List<CardObject> resourceSnapshot, bool isPlayer)
         {
             foreach (string effectId in execution.Skill.effectIds)
@@ -301,8 +379,26 @@ namespace FurrySocialCard.CardPresentation
             if (attackSelection == null) attackSelection = GetComponent<AttackSelectionController>();
             if (playerCharacterGroups == null) playerCharacterGroups = GameObject.Find("PlayerCharacterGroups")?.transform;
             if (enemyCharacterGroups == null) enemyCharacterGroups = GameObject.Find("EnemyCharacterGroups")?.transform;
+            if (skillGroup == null) skillGroup = FindSkillPerformanceGroup();
+            if (skillNameText == null && skillGroup != null)
+            {
+                Transform skillName = skillGroup.transform.Find("SkillName");
+                skillNameText = skillName != null ? skillName.GetComponentInChildren<TMP_Text>(true) : null;
+            }
+            if (skillGroup != null) skillGroup.SetActive(false);
         }
 
+        private static GameObject FindSkillPerformanceGroup()
+        {
+            foreach (GameObject root in SceneManager.GetActiveScene().GetRootGameObjects())
+            {
+                foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+                {
+                    if (child.name == "SkillGroup" && child.Find("SkillName") != null) return child.gameObject;
+                }
+            }
+            return null;
+        }
         private static void AddById<T>(IEnumerable<T> source, Func<T, string> id, Dictionary<string, T> destination, string label) where T : class
         {
             if (source == null) return;
@@ -315,6 +411,28 @@ namespace FurrySocialCard.CardPresentation
             }
         }
 
+        private readonly struct AttackPlan
+        {
+            public readonly CharacterAttackTarget AttackerTarget;
+            public readonly CharacterAttackTarget TargetTarget;
+            public readonly CharacterCombatantView AttackerView;
+            public readonly CharacterCombatantView TargetView;
+            public readonly IReadOnlyList<SkillDefinition> Skills;
+
+            public AttackPlan(
+                CharacterAttackTarget attackerTarget,
+                CharacterAttackTarget targetTarget,
+                CharacterCombatantView attackerView,
+                CharacterCombatantView targetView,
+                IReadOnlyList<SkillDefinition> skills)
+            {
+                AttackerTarget = attackerTarget;
+                TargetTarget = targetTarget;
+                AttackerView = attackerView;
+                TargetView = targetView;
+                Skills = skills;
+            }
+        }
         private readonly struct SkillExecution
         {
             public readonly CharacterCombatantView Attacker;

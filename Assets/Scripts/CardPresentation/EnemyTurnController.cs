@@ -30,6 +30,7 @@ namespace FurrySocialCard.CardPresentation
         private readonly List<CardObject> candidates = new List<CardObject>();
         private readonly Dictionary<CharacterAttackTarget, CharacterAttackTarget> attackTargets =
             new Dictionary<CharacterAttackTarget, CharacterAttackTarget>();
+        private readonly List<CharacterAttackTarget> attackOrder = new List<CharacterAttackTarget>();
         private readonly List<RectTransform> attackLines = new List<RectTransform>();
 
         private System.Random random;
@@ -47,6 +48,7 @@ namespace FurrySocialCard.CardPresentation
         private void OnDestroy()
         {
             if (gameFlow != null) gameFlow.PhaseChanged -= HandlePhaseChanged;
+            ClearAttackOrderLabels();
             ClearLines();
         }
 
@@ -60,6 +62,8 @@ namespace FurrySocialCard.CardPresentation
                 initialHandReady = false;
                 attackSelection?.SetEnemyAttackMovement(attackTargets.Keys, false);
                 attackTargets.Clear();
+                attackOrder.Clear();
+                ClearAttackOrderLabels();
                 ClearLines();
                 ResetRandom();
                 return;
@@ -128,11 +132,22 @@ namespace FurrySocialCard.CardPresentation
                 yield return null;
             }
 
+            var assignments = new List<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>>();
+            foreach (CharacterAttackTarget attacker in attackOrder)
+            {
+                if (attacker != null && attackTargets.TryGetValue(attacker, out CharacterAttackTarget target) && target != null)
+                {
+                    assignments.Add(new KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>(attacker, target));
+                }
+            }
+
             gameFlow.BeginEnemyAttackPerformance();
-            characterBattle?.ResolveEnemyAttacks(attackTargets);
             attackSelection?.SetEnemyAttackMovement(attackTargets.Keys, false);
-            attackTargets.Clear();
             ClearLines();
+            ClearAttackOrderLabels();
+            if (characterBattle != null) yield return characterBattle.PlayAttackSequence(assignments, false);
+            attackTargets.Clear();
+            attackOrder.Clear();
             if (decisionDelaySeconds > 0f) yield return new WaitForSeconds(decisionDelaySeconds);
             gameFlow.CompleteEnemyTurn();
             turnRoutine = null;
@@ -176,6 +191,7 @@ namespace FurrySocialCard.CardPresentation
         private void BuildRandomAttacks()
         {
             attackTargets.Clear();
+            attackOrder.Clear();
             var players = new List<CharacterAttackTarget>();
             CollectActiveTargets(playerCharacterGroups, players);
 
@@ -185,8 +201,13 @@ namespace FurrySocialCard.CardPresentation
                 Transform child = CharacterSlotUtility.ResolveCharacter(enemyCharacterGroups.GetChild(index));
                 if (child == null || !child.gameObject.activeInHierarchy) continue;
                 CharacterAttackTarget enemy = child.GetComponent<CharacterAttackTarget>();
-                if (enemy != null) attackTargets[enemy] = players[random.Next(players.Count)];
+                if (enemy != null)
+                {
+                    attackTargets[enemy] = players[random.Next(players.Count)];
+                    attackOrder.Add(enemy);
+                }
             }
+            RefreshAttackOrderLabels();
         }
 
         private static void CollectActiveTargets(Transform group, List<CharacterAttackTarget> destination)
@@ -201,12 +222,43 @@ namespace FurrySocialCard.CardPresentation
             }
         }
 
+        private void RefreshAttackOrderLabels()
+        {
+            ClearAttackOrderLabels();
+            var targetOrders = new Dictionary<CharacterAttackTarget, List<string>>();
+            for (int index = 0; index < attackOrder.Count; index++)
+            {
+                CharacterAttackTarget attacker = attackOrder[index];
+                if (attacker == null || !attackTargets.TryGetValue(attacker, out CharacterAttackTarget target) || target == null) continue;
+                string orderText = (index + 1).ToString();
+                attacker.SetAttackOrderText(orderText);
+                if (!targetOrders.TryGetValue(target, out List<string> orders))
+                {
+                    orders = new List<string>();
+                    targetOrders.Add(target, orders);
+                }
+                orders.Add(orderText);
+            }
+            foreach (KeyValuePair<CharacterAttackTarget, List<string>> pair in targetOrders)
+            {
+                pair.Key.SetAttackOrderText(string.Join(", ", pair.Value));
+            }
+        }
+
+        private void ClearAttackOrderLabels()
+        {
+            var characters = new List<CharacterAttackTarget>();
+            CollectActiveTargets(playerCharacterGroups, characters);
+            CollectActiveTargets(enemyCharacterGroups, characters);
+            foreach (CharacterAttackTarget character in characters) character.SetAttackOrderText(null);
+        }
         private void CreateLines()
         {
             ClearLines();
             if (lineParent == null) return;
-            foreach (KeyValuePair<CharacterAttackTarget, CharacterAttackTarget> pair in attackTargets)
+            foreach (CharacterAttackTarget attacker in attackOrder)
             {
+                if (!attackTargets.TryGetValue(attacker, out CharacterAttackTarget target)) continue;
                 var lineObject = new GameObject("EnemyAttackLine", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
                 RectTransform line = lineObject.GetComponent<RectTransform>();
                 line.SetParent(lineParent, false);
@@ -221,10 +273,11 @@ namespace FurrySocialCard.CardPresentation
         private void UpdateLines()
         {
             int index = 0;
-            foreach (KeyValuePair<CharacterAttackTarget, CharacterAttackTarget> pair in attackTargets)
+            foreach (CharacterAttackTarget attacker in attackOrder)
             {
                 if (index >= attackLines.Count) break;
-                UpdateLine(attackLines[index], pair.Key.ActiveLinkPoint, pair.Value.ActiveLinkPoint);
+                if (!attackTargets.TryGetValue(attacker, out CharacterAttackTarget target)) continue;
+                UpdateLine(attackLines[index], attacker.ActiveLinkPoint, target.ActiveLinkPoint);
                 index++;
             }
         }

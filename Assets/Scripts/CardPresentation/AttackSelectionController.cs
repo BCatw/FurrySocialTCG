@@ -10,6 +10,7 @@ namespace FurrySocialCard.CardPresentation
     public sealed class AttackSelectionController : MonoBehaviour
     {
         [SerializeField] private PlayerTurnDealController gameFlow;
+        [SerializeField] private CharacterBattleController characterBattle;
         [SerializeField] private GameObject cardGameGroup;
         [SerializeField] private Transform playerCharacterGroups;
         [SerializeField] private Transform enemyCharacterGroups;
@@ -27,11 +28,10 @@ namespace FurrySocialCard.CardPresentation
         private readonly List<CharacterAttackTarget> allies = new List<CharacterAttackTarget>();
         private readonly List<CharacterAttackTarget> enemies = new List<CharacterAttackTarget>();
         private readonly Dictionary<CharacterAttackTarget, CharacterAttackTarget> targets = new Dictionary<CharacterAttackTarget, CharacterAttackTarget>();
+        private readonly List<CharacterAttackTarget> attackOrder = new List<CharacterAttackTarget>();
         private readonly Dictionary<CharacterAttackTarget, RectTransform> lines = new Dictionary<CharacterAttackTarget, RectTransform>();
         private RectTransform lineParent;
         private CharacterAttackTarget selectedAlly;
-
-        public event Action<IReadOnlyDictionary<CharacterAttackTarget, CharacterAttackTarget>> AttackConfirmed;
 
         private void Awake()
         {
@@ -101,9 +101,11 @@ namespace FurrySocialCard.CardPresentation
             }
             else
             {
+                if (!targets.ContainsKey(selectedAlly)) attackOrder.Add(selectedAlly);
                 targets[selectedAlly] = character;
                 EnsureLine(selectedAlly);
                 RefreshAttackGlows();
+                RefreshAttackOrderLabels();
             }
         }
 
@@ -116,15 +118,34 @@ namespace FurrySocialCard.CardPresentation
         private IEnumerator CompleteAttackSelectionRoutine()
         {
             if (attackEndButton != null) attackEndButton.interactable = false;
-            AttackConfirmed?.Invoke(targets);
-            ClearSelection();
+            List<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>> assignments = CreateOrderedAssignments();
             gameFlow.BeginAttackPerformance();
-            if (attackPerformanceSeconds > 0f) yield return new WaitForSeconds(attackPerformanceSeconds);
+            if (characterBattle != null)
+            {
+                yield return characterBattle.PlayAttackSequence(assignments, true);
+            }
+            else if (attackPerformanceSeconds > 0f)
+            {
+                yield return new WaitForSeconds(attackPerformanceSeconds);
+            }
             if (gameFlow.CurrentPhase == PlayerTurnDealController.Phase.AttackPerformance)
             {
                 gameFlow.CompleteAttackSelection();
             }
             if (attackEndButton != null) attackEndButton.interactable = true;
+        }
+
+        private List<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>> CreateOrderedAssignments()
+        {
+            var result = new List<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>>();
+            foreach (CharacterAttackTarget attacker in attackOrder)
+            {
+                if (attacker != null && targets.TryGetValue(attacker, out CharacterAttackTarget target) && target != null)
+                {
+                    result.Add(new KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>(attacker, target));
+                }
+            }
+            return result;
         }
 
         private void ConfigureCharacters(Transform group, bool isAlly, List<CharacterAttackTarget> destination)
@@ -171,12 +192,14 @@ namespace FurrySocialCard.CardPresentation
         private void RemoveTarget(CharacterAttackTarget ally)
         {
             targets.Remove(ally);
+            attackOrder.Remove(ally);
             if (lines.TryGetValue(ally, out RectTransform line))
             {
                 lines.Remove(ally);
                 if (line != null) Destroy(line.gameObject);
             }
             RefreshAttackGlows();
+            RefreshAttackOrderLabels();
         }
 
         private void RefreshAttackGlows()
@@ -191,6 +214,31 @@ namespace FurrySocialCard.CardPresentation
             }
         }
 
+        private void RefreshAttackOrderLabels()
+        {
+            foreach (CharacterAttackTarget character in allies) character?.SetAttackOrderText(null);
+            foreach (CharacterAttackTarget character in enemies) character?.SetAttackOrderText(null);
+
+            var targetOrders = new Dictionary<CharacterAttackTarget, List<string>>();
+            for (int index = 0; index < attackOrder.Count; index++)
+            {
+                CharacterAttackTarget attacker = attackOrder[index];
+                if (attacker == null || !targets.TryGetValue(attacker, out CharacterAttackTarget target) || target == null) continue;
+                string orderText = (index + 1).ToString();
+                attacker.SetAttackOrderText(orderText);
+                if (!targetOrders.TryGetValue(target, out List<string> orders))
+                {
+                    orders = new List<string>();
+                    targetOrders.Add(target, orders);
+                }
+                orders.Add(orderText);
+            }
+
+            foreach (KeyValuePair<CharacterAttackTarget, List<string>> pair in targetOrders)
+            {
+                pair.Key.SetAttackOrderText(string.Join(", ", pair.Value));
+            }
+        }
         public void SetEnemyAttackMovement(IEnumerable<CharacterAttackTarget> attackers, bool attacking)
         {
             var activeAttackers = attackers != null
@@ -219,6 +267,8 @@ namespace FurrySocialCard.CardPresentation
         {
             selectedAlly = null;
             targets.Clear();
+            attackOrder.Clear();
+            RefreshAttackOrderLabels();
             ClearAttackGlows();
             foreach (RectTransform line in lines.Values)
             {
@@ -230,6 +280,7 @@ namespace FurrySocialCard.CardPresentation
         private void FindReferences()
         {
             if (gameFlow == null) gameFlow = GetComponent<PlayerTurnDealController>();
+            if (characterBattle == null) characterBattle = GetComponent<CharacterBattleController>();
             if (cardGameGroup == null) cardGameGroup = FindSceneObject("CardGameGroup");
             if (playerCharacterGroups == null) playerCharacterGroups = FindSceneObject("PlayerCharacterGroups")?.transform;
             if (enemyCharacterGroups == null) enemyCharacterGroups = FindSceneObject("EnemyCharacterGroups")?.transform;
