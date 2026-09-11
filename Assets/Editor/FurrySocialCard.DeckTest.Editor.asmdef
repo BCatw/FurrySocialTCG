@@ -4,6 +4,7 @@
   "references": [
     "FurrySocialCard.CardData",
     "FurrySocialCard.CardPresentation",
+    "FurrySocialCard.CharacterData",
     "Unity.TextMeshPro",
     "UnityEngine.UI"
   ],
