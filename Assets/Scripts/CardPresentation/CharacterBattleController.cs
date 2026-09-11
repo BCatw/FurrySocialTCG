@@ -154,6 +154,71 @@ namespace FurrySocialCard.CardPresentation
             }
         }
 
+        public void RefreshAttackPreview(
+            IReadOnlyList<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>> assignments,
+            bool isPlayer)
+        {
+            ClearAttackPreview();
+            if (gameFlow == null || assignments == null || assignments.Count == 0) return;
+
+            List<CardObject> resources = isPlayer
+                ? gameFlow.GetAvailableResourceCardsSnapshot()
+                : gameFlow.GetAvailableEnemyResourceCardsSnapshot();
+            var projected = new Dictionary<CharacterCombatantView, int>();
+            var participants = new HashSet<CharacterCombatantView>();
+            foreach (CharacterCombatantView view in combatants.Values) projected[view] = view.CurrentClimax;
+
+            foreach (KeyValuePair<CharacterAttackTarget, CharacterAttackTarget> assignment in assignments)
+            {
+                if (assignment.Key == null || assignment.Value == null) continue;
+                if (!combatants.TryGetValue(assignment.Key, out CharacterCombatantView attacker) ||
+                    !combatants.TryGetValue(assignment.Value, out CharacterCombatantView target)) continue;
+                participants.Add(attacker);
+                participants.Add(target);
+
+                for (int skillIndex = 0; skillIndex < 3; skillIndex++)
+                {
+                    if (!TryGetSkill(attacker.Definition, skillIndex, out SkillDefinition skill) ||
+                        !IsUsable(skill, resources)) continue;
+                    int selfDelta = 0;
+                    int targetDelta = 0;
+                    foreach (string effectId in skill.effectIds)
+                    {
+                        if (!effects.TryGetValue(effectId, out EffectDefinition effect)) continue;
+                        CharacterCombatantView recipient = ResolvePreviewTarget(effect.target, attacker, target);
+                        if (recipient == null || !projected.TryGetValue(recipient, out int before)) continue;
+                        int after;
+                        if (effect.effectType == "force_climax")
+                            after = Mathf.Max(1, recipient.Definition.climaxLimit);
+                        else if (effect.effectType == "climax_delta")
+                            after = Mathf.Clamp(before + EvaluateValue(effect.value, resources), 0,
+                                Mathf.Max(1, recipient.Definition.climaxLimit));
+                        else
+                            continue;
+                        int effectiveDelta = after - before;
+                        projected[recipient] = after;
+                        if (recipient == attacker) selfDelta += effectiveDelta;
+                        if (recipient == target) targetDelta += effectiveDelta;
+                    }
+                    attacker.SetSkillClimaxPreview(skillIndex, selfDelta, targetDelta, true);
+                }
+            }
+
+            foreach (CharacterCombatantView participant in participants)
+                participant.SetClimaxPreview(projected[participant], true);
+        }
+
+        public void ClearAttackPreview()
+        {
+            foreach (CharacterCombatantView view in combatants.Values) view?.ClearAttackPreview();
+        }
+
+        private static CharacterCombatantView ResolvePreviewTarget(string target,
+            CharacterCombatantView attacker, CharacterCombatantView attackTarget)
+        {
+            return target == "self" ? attacker : target == "enemy_single" ? attackTarget : null;
+        }
+
         public IEnumerator PlayAttackSequence(
             IReadOnlyList<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>> assignments,
             bool isPlayer)

@@ -106,6 +106,7 @@ namespace FurrySocialCard.CardPresentation
                 EnsureLine(selectedAlly);
                 RefreshAttackGlows();
                 RefreshAttackOrderLabels();
+                RefreshAttackPreview();
             }
         }
 
@@ -200,6 +201,7 @@ namespace FurrySocialCard.CardPresentation
             }
             RefreshAttackGlows();
             RefreshAttackOrderLabels();
+            RefreshAttackPreview();
         }
 
         private void RefreshAttackGlows()
@@ -265,6 +267,7 @@ namespace FurrySocialCard.CardPresentation
 
         private void ClearSelection()
         {
+            characterBattle?.ClearAttackPreview();
             selectedAlly = null;
             targets.Clear();
             attackOrder.Clear();
@@ -275,6 +278,11 @@ namespace FurrySocialCard.CardPresentation
                 if (line != null) Destroy(line.gameObject);
             }
             lines.Clear();
+        }
+
+        private void RefreshAttackPreview()
+        {
+            characterBattle?.RefreshAttackPreview(CreateOrderedAssignments(), true);
         }
 
         private void FindReferences()

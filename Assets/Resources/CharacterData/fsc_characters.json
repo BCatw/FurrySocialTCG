@@ -1,6 +1,6 @@
 {
     "schemaVersion": 1,
-    "dataVersion": "xlsx-20260911101301",
+    "dataVersion": "xlsx-20260911185228",
     "characters": [
         {
             "id": "char_T000",
@@ -256,98 +256,98 @@
             "id": "effect_SelfForceClimax",
             "effectType": "force_climax",
             "target": "self",
-            "value": "0.0",
+            "value": "0",
             "durationTurns": 0
         },
         {
             "id": "effect_TargetClimaxUp_Massive",
             "effectType": "climax_delta",
             "target": "enemy_single",
-            "value": "250.0",
+            "value": "250",
             "durationTurns": 0
         },
         {
             "id": "effect_TargetClimaxUp_Medium",
             "effectType": "climax_delta",
             "target": "enemy_single",
-            "value": "150.0",
+            "value": "150",
             "durationTurns": 0
         },
         {
             "id": "effect_TargetClimaxUp_Small",
             "effectType": "climax_delta",
             "target": "enemy_single",
-            "value": "50.0",
+            "value": "50",
             "durationTurns": 0
         },
         {
             "id": "effect_TargetClimaxDown_Massive",
             "effectType": "climax_delta",
             "target": "enemy_single",
-            "value": "-225.0",
+            "value": "-225",
             "durationTurns": 0
         },
         {
             "id": "effect_TargetClimaxDown_Medium",
             "effectType": "climax_delta",
             "target": "enemy_single",
-            "value": "-125.0",
+            "value": "-125",
             "durationTurns": 0
         },
         {
             "id": "effect_TargetClimaxDown_Small",
             "effectType": "climax_delta",
             "target": "enemy_single",
-            "value": "-25.0",
+            "value": "-25",
             "durationTurns": 0
         },
         {
             "id": "effect_SelfClimaxUp_Massive",
             "effectType": "climax_delta",
             "target": "self",
-            "value": "150.0",
+            "value": "150",
             "durationTurns": 0
         },
         {
             "id": "effect_SelfClimaxUp_Medium",
             "effectType": "climax_delta",
             "target": "self",
-            "value": "100.0",
+            "value": "100",
             "durationTurns": 0
         },
         {
             "id": "effect_SelfClimaxUp_Small",
             "effectType": "climax_delta",
             "target": "self",
-            "value": "50.0",
+            "value": "50",
             "durationTurns": 0
         },
         {
             "id": "effect_Draw_1",
             "effectType": "draw_card",
             "target": "self",
-            "value": "1.0",
+            "value": "1",
             "durationTurns": 0
         },
         {
             "id": "effect_TakeResource_1",
             "effectType": "resource_take",
             "target": "self",
-            "value": "1.0",
+            "value": "1",
             "durationTurns": 0
         },
         {
             "id": "effect_SelfClimaxUp_Time<動作>",
             "effectType": "climax_delta",
             "target": "self",
-            "value": "20+1*<動作>",
+            "value": "20+10*<動作>",
             "durationTurns": 0
         },
         {
             "id": "effect_TargetResourceConsume",
             "effectType": "resource_consume",
             "target": "",
-            "value": "1.0",
+            "value": "1",
             "durationTurns": 0
         },
         {
