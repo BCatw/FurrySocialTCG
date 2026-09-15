@@ -64,6 +64,7 @@ namespace FurrySocialCard.CardPresentation
                     ShowPlayer("PLAY", playerBlue);
                     break;
                 case PlayerTurnDealController.Phase.AttackSelection:
+                case PlayerTurnDealController.Phase.ResourcePaymentSelection:
                     ShowPlayer("SELECT", selectionYellow);
                     break;
                 case PlayerTurnDealController.Phase.AttackPerformance:

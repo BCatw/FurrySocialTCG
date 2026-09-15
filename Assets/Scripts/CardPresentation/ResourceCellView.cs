@@ -14,6 +14,7 @@ namespace FurrySocialCard.CardPresentation
         [SerializeField] private GameObject patternCreatorObject;
         [SerializeField] private TMP_InputField patternCountInput;
         [SerializeField] private TMP_Text conditionalStatementText;
+        [SerializeField] private UIGlowEffect backgroundGlow;
         [SerializeField, Range(0f, 1f)] private float emptyAlpha = 0.3f;
 
         public string Tier { get; private set; }
@@ -24,6 +25,8 @@ namespace FurrySocialCard.CardPresentation
 
         private bool patternMode;
         private bool inputEventsRegistered;
+        private Color normalCountColor = Color.white;
+        private bool countColorCaptured;
 
         private void Reset() => FindReferences();
 
@@ -45,8 +48,11 @@ namespace FurrySocialCard.CardPresentation
             }
             if (countText != null)
             {
+                CaptureCountColor();
                 countText.text = count.ToString();
+                countText.color = normalCountColor;
             }
+            SetGlow(false, Color.white);
             if (conditionalStatement != null && !patternMode)
             {
                 conditionalStatement.SetActive(false);
@@ -106,6 +112,66 @@ namespace FurrySocialCard.CardPresentation
                 RegisterInputEvents();
                 RefreshPatternPresentation();
             }
+        }
+
+        public void ShowActionPreview(int beforeAvailable, int afterAvailable, bool relevant,
+            Color glowColor, Color changedColor, Color unchangedColor, float glowIntensity = 1f)
+        {
+            FindReferences();
+            if (countText != null)
+            {
+                countText.text = beforeAvailable == afterAvailable
+                    ? beforeAvailable.ToString()
+                    : $"{beforeAvailable}>{afterAvailable}";
+                countText.color = beforeAvailable == afterAvailable ? unchangedColor : changedColor;
+            }
+            SetGlow(relevant, glowColor, glowIntensity);
+        }
+
+        public void ShowSkillRequirement(string text, Color textColor, Color glowColor)
+        {
+            FindReferences();
+            if (countText != null)
+            {
+                countText.text = text ?? string.Empty;
+                countText.color = textColor;
+            }
+            SetGlow(true, glowColor);
+        }
+
+        public void BindSummary(PatternScope scope, string categoryName, int count)
+        {
+            FindReferences();
+            PatternScope = scope;
+            Tier = scope == PatternScope.ResourceMedium ? categoryName : null;
+            Attribute = scope == PatternScope.InteractionType ? categoryName : null;
+            if (backgroundImage != null)
+            {
+                bool show = scope == PatternScope.ResourceMedium;
+                backgroundImage.gameObject.SetActive(show);
+                if (show) backgroundImage.color = CardObject.ResolveTierColor(categoryName);
+            }
+            if (iconImage != null)
+            {
+                bool show = scope == PatternScope.InteractionType;
+                iconImage.gameObject.SetActive(show);
+                if (show)
+                {
+                    iconImage.sprite = CardObject.ResolveAttributeSprite(categoryName);
+                    iconImage.color = Color.white;
+                }
+            }
+            if (countText != null)
+            {
+                countText.gameObject.SetActive(true);
+                CaptureCountColor();
+                countText.text = count.ToString();
+                countText.color = normalCountColor;
+            }
+            SetGlow(false, Color.white);
+            CanvasGroup group = GetComponent<CanvasGroup>();
+            if (group == null) group = gameObject.AddComponent<CanvasGroup>();
+            group.alpha = count > 0 ? 1f : emptyAlpha;
         }
 
         public PatternRequirement GetPatternRequirement()
@@ -212,6 +278,8 @@ namespace FurrySocialCard.CardPresentation
             {
                 backgroundImage = transform.Find("BG")?.GetComponent<Image>();
             }
+            if (backgroundGlow == null && backgroundImage != null)
+                backgroundGlow = backgroundImage.GetComponent<UIGlowEffect>();
             if (iconImage == null)
             {
                 iconImage = transform.Find("Icon")?.GetComponent<Image>();
@@ -236,6 +304,21 @@ namespace FurrySocialCard.CardPresentation
             {
                 patternCountInput = patternCreatorObject.transform.Find("InputField (TMP)")?.GetComponent<TMP_InputField>();
             }
+        }
+
+        private void SetGlow(bool visible, Color color, float intensity = 1f)
+        {
+            if (backgroundGlow == null) return;
+            backgroundGlow.GlowColor = color;
+            backgroundGlow.Intensity = intensity;
+            backgroundGlow.enabled = visible;
+        }
+
+        private void CaptureCountColor()
+        {
+            if (countColorCaptured || countText == null) return;
+            normalCountColor = countText.color;
+            countColorCaptured = true;
         }
     }
 }

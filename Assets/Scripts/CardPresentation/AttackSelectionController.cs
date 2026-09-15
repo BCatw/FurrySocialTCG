@@ -15,6 +15,7 @@ namespace FurrySocialCard.CardPresentation
         [SerializeField] private Transform playerCharacterGroups;
         [SerializeField] private Transform enemyCharacterGroups;
         [SerializeField] private Button attackEndButton;
+        [SerializeField] private Button selectDoneButton;
         [SerializeField, Min(1f)] private float lineWidth = 12f;
         [SerializeField] private Color lineColor = new Color(1f, 0.25f, 0.3f, 0.9f);
         [SerializeField, Min(0f)] private float attackPerformanceSeconds = 0.5f;
@@ -32,6 +33,10 @@ namespace FurrySocialCard.CardPresentation
         private readonly Dictionary<CharacterAttackTarget, RectTransform> lines = new Dictionary<CharacterAttackTarget, RectTransform>();
         private RectTransform lineParent;
         private CharacterAttackTarget selectedAlly;
+        private readonly HashSet<CardObject> selectedConsumeCards = new HashSet<CardObject>();
+        private List<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>> pendingAssignments;
+        private ResourceActionPlan pendingResourcePlan;
+        private Coroutine buttonBindingRoutine;
 
         private void Awake()
         {
@@ -39,6 +44,9 @@ namespace FurrySocialCard.CardPresentation
             ConfigureCharacters(playerCharacterGroups, true, allies);
             ConfigureCharacters(enemyCharacterGroups, false, enemies);
             attackEndButton?.onClick.AddListener(CompleteAttackSelection);
+            TryBindSelectDoneButton();
+            if (selectDoneButton == null) buttonBindingRoutine = StartCoroutine(BindSelectDoneButtonWhenAvailable());
+            CardObject.Clicked += HandleResourceCardClicked;
             if (gameFlow != null)
             {
                 gameFlow.PhaseChanged += HandlePhaseChanged;
@@ -49,6 +57,8 @@ namespace FurrySocialCard.CardPresentation
         private void OnDestroy()
         {
             attackEndButton?.onClick.RemoveListener(CompleteAttackSelection);
+            selectDoneButton?.onClick.RemoveListener(CompleteResourceSelection);
+            CardObject.Clicked -= HandleResourceCardClicked;
             if (gameFlow != null) gameFlow.PhaseChanged -= HandlePhaseChanged;
             Unsubscribe(allies);
             Unsubscribe(enemies);
@@ -70,16 +80,18 @@ namespace FurrySocialCard.CardPresentation
         {
             bool isAttackSelection = phase == PlayerTurnDealController.Phase.AttackSelection;
             bool isAttackPerformance = phase == PlayerTurnDealController.Phase.AttackPerformance;
+            bool isResourcePayment = phase == PlayerTurnDealController.Phase.ResourcePaymentSelection;
             bool isEnemyAttack = phase == PlayerTurnDealController.Phase.EnemyAttackSelection
                 || phase == PlayerTurnDealController.Phase.EnemyAttackPerformance;
             if (cardGameGroup != null)
             {
-                bool showCards = !isAttackSelection && !isAttackPerformance && !isEnemyAttack;
+                bool showCards = isResourcePayment || (!isAttackSelection && !isAttackPerformance && !isEnemyAttack);
                 cardGameGroup.SetActive(showCards);
             }
             if (attackEndButton != null) attackEndButton.gameObject.SetActive(isAttackSelection);
+            if (selectDoneButton != null) selectDoneButton.gameObject.SetActive(isResourcePayment);
             if (isAttackSelection) RefreshAttackGlows();
-            else ClearSelection();
+            else if (!isResourcePayment) ClearSelection();
         }
 
         private void HandleCharacterClicked(CharacterAttackTarget character)
@@ -113,17 +125,29 @@ namespace FurrySocialCard.CardPresentation
         private void CompleteAttackSelection()
         {
             if (gameFlow == null || gameFlow.CurrentPhase != PlayerTurnDealController.Phase.AttackSelection) return;
-            StartCoroutine(CompleteAttackSelectionRoutine());
+            List<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>> assignments = CreateOrderedAssignments();
+            ResourceActionPlan plan = characterBattle?.RefreshAttackPreview(assignments, true);
+            if (plan != null && plan.RequiresConsumeSelection && plan.RequiredConsumeCount > 0)
+            {
+                pendingAssignments = assignments;
+                pendingResourcePlan = plan;
+                selectedConsumeCards.Clear();
+                gameFlow.BeginResourcePaymentSelection();
+                RefreshSelectableResourceCards();
+                return;
+            }
+            StartCoroutine(CompleteAttackSelectionRoutine(assignments, plan));
         }
 
-        private IEnumerator CompleteAttackSelectionRoutine()
+        private IEnumerator CompleteAttackSelectionRoutine(
+            List<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>> assignments,
+            ResourceActionPlan resourcePlan)
         {
             if (attackEndButton != null) attackEndButton.interactable = false;
-            List<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>> assignments = CreateOrderedAssignments();
             gameFlow.BeginAttackPerformance();
             if (characterBattle != null)
             {
-                yield return characterBattle.PlayAttackSequence(assignments, true);
+                yield return characterBattle.PlayAttackSequence(assignments, true, resourcePlan);
             }
             else if (attackPerformanceSeconds > 0f)
             {
@@ -134,6 +158,79 @@ namespace FurrySocialCard.CardPresentation
                 gameFlow.CompleteAttackSelection();
             }
             if (attackEndButton != null) attackEndButton.interactable = true;
+        }
+
+        private void HandleResourceCardClicked(CardObject card, UnityEngine.EventSystems.PointerEventData eventData)
+        {
+            if (gameFlow == null || gameFlow.CurrentPhase != PlayerTurnDealController.Phase.ResourcePaymentSelection
+                || card == null || pendingResourcePlan?.SelectableConsumeCards == null
+                || !ContainsCard(pendingResourcePlan.SelectableConsumeCards, card))
+                return;
+
+            if (!selectedConsumeCards.Remove(card))
+            {
+                if (selectedConsumeCards.Count >= pendingResourcePlan.RequiredConsumeCount) return;
+                selectedConsumeCards.Add(card);
+            }
+            RefreshSelectableResourceCards();
+            pendingResourcePlan = characterBattle?.RefreshAttackPreview(
+                pendingAssignments, true, selectedConsumeCards) ?? pendingResourcePlan;
+        }
+
+        private void CompleteResourceSelection()
+        {
+            if (gameFlow == null || gameFlow.CurrentPhase != PlayerTurnDealController.Phase.ResourcePaymentSelection)
+                return;
+            pendingResourcePlan = characterBattle?.RefreshAttackPreview(
+                pendingAssignments, true, selectedConsumeCards) ?? pendingResourcePlan;
+            ClearSelectableResourceCards();
+            StartCoroutine(CompleteAttackSelectionRoutine(pendingAssignments, pendingResourcePlan));
+        }
+
+        private void RefreshSelectableResourceCards()
+        {
+            if (pendingResourcePlan?.SelectableConsumeCards == null) return;
+            foreach (CardObject card in pendingResourcePlan.SelectableConsumeCards)
+            {
+                if (card == null) continue;
+                card.SetMatchHint(true);
+                card.SetSelected(selectedConsumeCards.Contains(card));
+            }
+        }
+
+        private void ClearSelectableResourceCards()
+        {
+            if (pendingResourcePlan?.SelectableConsumeCards != null)
+                foreach (CardObject card in pendingResourcePlan.SelectableConsumeCards)
+                    if (card != null) { card.SetSelected(false); card.SetMatchHint(false); }
+            selectedConsumeCards.Clear();
+        }
+
+        private static bool ContainsCard(IReadOnlyList<CardObject> cards, CardObject target)
+        {
+            foreach (CardObject card in cards) if (card == target) return true;
+            return false;
+        }
+
+        private IEnumerator BindSelectDoneButtonWhenAvailable()
+        {
+            while (isActiveAndEnabled && selectDoneButton == null)
+            {
+                TryBindSelectDoneButton();
+                if (selectDoneButton == null) yield return null;
+            }
+            buttonBindingRoutine = null;
+        }
+
+        private void TryBindSelectDoneButton()
+        {
+            if (selectDoneButton != null) return;
+            selectDoneButton = FindObjectAcrossLoadedScenes("SelectDoneBtn")?.GetComponent<Button>();
+            if (selectDoneButton == null) return;
+            selectDoneButton.onClick.RemoveListener(CompleteResourceSelection);
+            selectDoneButton.onClick.AddListener(CompleteResourceSelection);
+            selectDoneButton.gameObject.SetActive(gameFlow != null
+                && gameFlow.CurrentPhase == PlayerTurnDealController.Phase.ResourcePaymentSelection);
         }
 
         private List<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>> CreateOrderedAssignments()
@@ -267,6 +364,9 @@ namespace FurrySocialCard.CardPresentation
 
         private void ClearSelection()
         {
+            ClearSelectableResourceCards();
+            pendingAssignments = null;
+            pendingResourcePlan = null;
             characterBattle?.ClearAttackPreview();
             selectedAlly = null;
             targets.Clear();
@@ -309,6 +409,19 @@ namespace FurrySocialCard.CardPresentation
                 {
                     if (child.name == objectName) return child.gameObject;
                 }
+            }
+            return null;
+        }
+
+        private static GameObject FindObjectAcrossLoadedScenes(string objectName)
+        {
+            for (int sceneIndex = 0; sceneIndex < SceneManager.sceneCount; sceneIndex++)
+            {
+                Scene scene = SceneManager.GetSceneAt(sceneIndex);
+                if (!scene.isLoaded) continue;
+                foreach (GameObject root in scene.GetRootGameObjects())
+                    foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+                        if (child.name == objectName) return child.gameObject;
             }
             return null;
         }

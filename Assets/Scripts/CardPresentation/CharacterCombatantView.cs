@@ -1,3 +1,4 @@
+using System;
 using FurrySocialCard.CharacterData;
 using TMPro;
 using UnityEngine;
@@ -17,6 +18,7 @@ namespace FurrySocialCard.CardPresentation
         [SerializeField] private Color usableSkillColor = new Color32(255, 215, 0, 255);
 
         private readonly Color[] normalSkillColors = new Color[3];
+        public event Action<CharacterCombatantView, int, bool> SkillHoverChanged;
         public CharacterDefinition Definition { get; private set; }
         public int CurrentClimax { get; private set; }
         public bool IsAlly { get; private set; }
@@ -113,6 +115,13 @@ namespace FurrySocialCard.CardPresentation
                 if (skillTexts[index] == null) skillTexts[index] = skillRoot?.Find("Name")?.GetComponentInChildren<TMP_Text>(true);
                 if (skillSelfClimaxTexts[index] == null) skillSelfClimaxTexts[index] = skillRoot?.Find("climax_self")?.GetComponentInChildren<TMP_Text>(true);
                 if (skillTargetClimaxTexts[index] == null) skillTargetClimaxTexts[index] = skillRoot?.Find("climax_target")?.GetComponentInChildren<TMP_Text>(true);
+                if (skillRoot != null)
+                {
+                    SkillHoverTarget hover = skillRoot.GetComponent<SkillHoverTarget>();
+                    if (hover == null) hover = skillRoot.gameObject.AddComponent<SkillHoverTarget>();
+                    int capturedIndex = index;
+                    hover.Configure(active => SkillHoverChanged?.Invoke(this, capturedIndex, active));
+                }
             }
         }
 

@@ -50,6 +50,8 @@ namespace FurrySocialCard.CardPresentation
         private readonly Dictionary<string, Sprite> sprites = new Dictionary<string, Sprite>();
         private readonly Dictionary<CharacterAttackTarget, CharacterCombatantView> combatants = new Dictionary<CharacterAttackTarget, CharacterCombatantView>();
         private readonly Dictionary<string, List<PatternRequirement>> parsedPatterns = new Dictionary<string, List<PatternRequirement>>();
+        public event Action<ResourceActionPlan> ResourceActionPreviewChanged;
+        public event Action<SkillRequirementPreview> SkillRequirementPreviewChanged;
 
         private void Awake()
         {
@@ -72,6 +74,8 @@ namespace FurrySocialCard.CardPresentation
                 gameFlow.ResourceCardsChanged -= RefreshSkillAvailability;
                 gameFlow.EnemyResourceCardsChanged -= RefreshSkillAvailability;
             }
+            foreach (CharacterCombatantView view in combatants.Values)
+                if (view != null) view.SkillHoverChanged -= HandleSkillHoverChanged;
         }
 
         private bool LoadData()
@@ -127,6 +131,8 @@ namespace FurrySocialCard.CardPresentation
                 if (view == null) view = child.gameObject.AddComponent<CharacterCombatantView>();
                 sprites.TryGetValue(definition.id, out Sprite portrait);
                 view.Bind(definition, skillDefinitions, portrait, isAlly);
+                view.SkillHoverChanged -= HandleSkillHoverChanged;
+                view.SkillHoverChanged += HandleSkillHoverChanged;
                 CharacterAttackTarget attackTarget = child.GetComponent<CharacterAttackTarget>();
                 if (attackTarget == null)
                 {
@@ -154,63 +160,61 @@ namespace FurrySocialCard.CardPresentation
             }
         }
 
-        public void RefreshAttackPreview(
+        public ResourceActionPlan RefreshAttackPreview(
             IReadOnlyList<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>> assignments,
-            bool isPlayer)
+            bool isPlayer,
+            IReadOnlyCollection<CardObject> preferredConsumeCards = null)
         {
             ClearAttackPreview();
-            if (gameFlow == null || assignments == null || assignments.Count == 0) return;
+            if (gameFlow == null || assignments == null || assignments.Count == 0) return null;
 
             List<CardObject> resources = isPlayer
                 ? gameFlow.GetAvailableResourceCardsSnapshot()
                 : gameFlow.GetAvailableEnemyResourceCardsSnapshot();
+            ResourceActionPlan resourcePlan = BuildResourceActionPlan(assignments, resources, preferredConsumeCards);
+            ResourceActionPreviewChanged?.Invoke(resourcePlan);
             var projected = new Dictionary<CharacterCombatantView, int>();
             var participants = new HashSet<CharacterCombatantView>();
             foreach (CharacterCombatantView view in combatants.Values) projected[view] = view.CurrentClimax;
 
-            foreach (KeyValuePair<CharacterAttackTarget, CharacterAttackTarget> assignment in assignments)
+            foreach (SkillResourcePlan skillPlan in resourcePlan.Skills)
             {
-                if (assignment.Key == null || assignment.Value == null) continue;
-                if (!combatants.TryGetValue(assignment.Key, out CharacterCombatantView attacker) ||
-                    !combatants.TryGetValue(assignment.Value, out CharacterCombatantView target)) continue;
+                CharacterCombatantView attacker = skillPlan.Attacker;
+                CharacterCombatantView target = skillPlan.Target;
                 participants.Add(attacker);
                 participants.Add(target);
-
-                for (int skillIndex = 0; skillIndex < 3; skillIndex++)
+                int selfDelta = 0;
+                int targetDelta = 0;
+                foreach (string effectId in skillPlan.Skill.effectIds)
                 {
-                    if (!TryGetSkill(attacker.Definition, skillIndex, out SkillDefinition skill) ||
-                        !IsUsable(skill, resources)) continue;
-                    int selfDelta = 0;
-                    int targetDelta = 0;
-                    foreach (string effectId in skill.effectIds)
-                    {
-                        if (!effects.TryGetValue(effectId, out EffectDefinition effect)) continue;
-                        CharacterCombatantView recipient = ResolvePreviewTarget(effect.target, attacker, target);
-                        if (recipient == null || !projected.TryGetValue(recipient, out int before)) continue;
-                        int after;
-                        if (effect.effectType == "force_climax")
-                            after = Mathf.Max(1, recipient.Definition.climaxLimit);
-                        else if (effect.effectType == "climax_delta")
-                            after = Mathf.Clamp(before + EvaluateValue(effect.value, resources), 0,
-                                Mathf.Max(1, recipient.Definition.climaxLimit));
-                        else
-                            continue;
-                        int effectiveDelta = after - before;
-                        projected[recipient] = after;
-                        if (recipient == attacker) selfDelta += effectiveDelta;
-                        if (recipient == target) targetDelta += effectiveDelta;
-                    }
-                    attacker.SetSkillClimaxPreview(skillIndex, selfDelta, targetDelta, true);
+                    if (!effects.TryGetValue(effectId, out EffectDefinition effect)) continue;
+                    CharacterCombatantView recipient = ResolvePreviewTarget(effect.target, attacker, target);
+                    if (recipient == null || !projected.TryGetValue(recipient, out int before)) continue;
+                    int after;
+                    if (effect.effectType == "force_climax")
+                        after = Mathf.Max(1, recipient.Definition.climaxLimit);
+                    else if (effect.effectType == "climax_delta")
+                        after = Mathf.Clamp(before + EvaluateValue(effect.value, resources), 0,
+                            Mathf.Max(1, recipient.Definition.climaxLimit));
+                    else
+                        continue;
+                    int effectiveDelta = after - before;
+                    projected[recipient] = after;
+                    if (recipient == attacker) selfDelta += effectiveDelta;
+                    if (recipient == target) targetDelta += effectiveDelta;
                 }
+                attacker.SetSkillClimaxPreview(skillPlan.SkillIndex, selfDelta, targetDelta, true);
             }
 
             foreach (CharacterCombatantView participant in participants)
                 participant.SetClimaxPreview(projected[participant], true);
+            return resourcePlan;
         }
 
         public void ClearAttackPreview()
         {
             foreach (CharacterCombatantView view in combatants.Values) view?.ClearAttackPreview();
+            ResourceActionPreviewChanged?.Invoke(null);
         }
 
         private static CharacterCombatantView ResolvePreviewTarget(string target,
@@ -221,13 +225,15 @@ namespace FurrySocialCard.CardPresentation
 
         public IEnumerator PlayAttackSequence(
             IReadOnlyList<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>> assignments,
-            bool isPlayer)
+            bool isPlayer,
+            ResourceActionPlan preparedPlan = null)
         {
             if (gameFlow == null || assignments == null || assignments.Count == 0) yield break;
 
             List<CardObject> resourceSnapshot = isPlayer
                 ? gameFlow.GetAvailableResourceCardsSnapshot()
                 : gameFlow.GetAvailableEnemyResourceCardsSnapshot();
+            ResourceActionPlan resourcePlan = preparedPlan ?? BuildResourceActionPlan(assignments, resourceSnapshot, null);
             var plans = new List<AttackPlan>();
 
             foreach (KeyValuePair<CharacterAttackTarget, CharacterAttackTarget> assignment in assignments)
@@ -236,24 +242,19 @@ namespace FurrySocialCard.CardPresentation
                 if (!combatants.TryGetValue(assignment.Key, out CharacterCombatantView attackerView)
                     || !combatants.TryGetValue(assignment.Value, out CharacterCombatantView targetView)) continue;
 
-                var availableSkills = new List<SkillDefinition>();
-                for (int skillIndex = 0; skillIndex < 3; skillIndex++)
-                {
-                    if (TryGetSkill(attackerView.Definition, skillIndex, out SkillDefinition skill)
-                        && IsUsable(skill, resourceSnapshot))
-                    {
-                        availableSkills.Add(skill);
-                    }
-                }
+                var availableSkills = new List<SkillResourcePlan>();
+                foreach (SkillResourcePlan skillPlan in resourcePlan.Skills)
+                    if (skillPlan.Attacker == attackerView && skillPlan.Target == targetView)
+                        availableSkills.Add(skillPlan);
                 plans.Add(new AttackPlan(assignment.Key, assignment.Value, attackerView, targetView, availableSkills));
             }
 
             for (int planIndex = 0; planIndex < plans.Count; planIndex++)
             {
                 AttackPlan plan = plans[planIndex];
-                foreach (SkillDefinition skill in plan.Skills)
+                foreach (SkillResourcePlan skill in plan.Skills)
                 {
-                    yield return ShowSkillPerformance(skill.displayName);
+                    yield return ShowSkillPerformance(skill.Skill.displayName);
                 }
 
                 Tween attackTween = plan.AttackerTarget.CreateAttackTween(
@@ -264,9 +265,9 @@ namespace FurrySocialCard.CardPresentation
                     hitShakeVibrato,
                     () =>
                     {
-                        foreach (SkillDefinition skill in plan.Skills)
+                        foreach (SkillResourcePlan skill in plan.Skills)
                         {
-                            ExecuteSkill(new SkillExecution(plan.AttackerView, plan.TargetView, skill), resourceSnapshot, isPlayer);
+                            ExecuteSkill(new SkillExecution(plan.AttackerView, plan.TargetView, skill.Skill), skill.PaymentCards, resourceSnapshot, isPlayer);
                         }
                         RefreshSkillAvailability();
                     });
@@ -321,7 +322,8 @@ namespace FurrySocialCard.CardPresentation
             return DOTween.To(() => target.localScale, value => target.localScale = value, destination, Mathf.Max(0f, duration))
                 .SetEase(ease);
         }
-        private void ExecuteSkill(SkillExecution execution, List<CardObject> resourceSnapshot, bool isPlayer)
+        private void ExecuteSkill(SkillExecution execution, IReadOnlyList<CardObject> paymentCards,
+            List<CardObject> resourceSnapshot, bool isPlayer)
         {
             foreach (string effectId in execution.Skill.effectIds)
             {
@@ -345,17 +347,15 @@ namespace FurrySocialCard.CardPresentation
                 }
             }
 
-            if (!TryGetRequirements(execution.Skill, out List<PatternRequirement> requirements)) return;
-            List<CardObject> usedCards = SelectRequiredCards(requirements, resourceSnapshot);
             if (string.Equals(execution.Skill.resourceBehavior, "Tap", StringComparison.OrdinalIgnoreCase))
             {
-                if (isPlayer) gameFlow.TapResources(usedCards);
-                else gameFlow.TapEnemyResources(usedCards);
+                if (isPlayer) gameFlow.TapResources(paymentCards);
+                else gameFlow.TapEnemyResources(paymentCards);
             }
             else if (string.Equals(execution.Skill.resourceBehavior, "Consume", StringComparison.OrdinalIgnoreCase))
             {
-                if (isPlayer) gameFlow.ConsumeResources(usedCards);
-                else gameFlow.ConsumeEnemyResources(usedCards);
+                if (isPlayer) gameFlow.ConsumeResources(paymentCards);
+                else gameFlow.ConsumeEnemyResources(paymentCards);
             }
         }
 
@@ -397,22 +397,174 @@ namespace FurrySocialCard.CardPresentation
             }
         }
 
-        private static List<CardObject> SelectRequiredCards(List<PatternRequirement> requirements, List<CardObject> resources)
+        private ResourceActionPlan BuildResourceActionPlan(
+            IReadOnlyList<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>> assignments,
+            List<CardObject> resources,
+            IReadOnlyCollection<CardObject> preferredConsumeCards)
+        {
+            var skillPlans = new List<SkillResourcePlan>();
+            var reserved = new HashSet<CardObject>();
+            var changes = new Dictionary<ResourceCellKey, ResourceCellChange>();
+            var selectableConsumeCards = new HashSet<CardObject>();
+            int requiredConsumeCount = 0;
+            bool requiresConsumeSelection = false;
+            foreach (CardObject card in resources)
+            {
+                if (card?.Definition == null) continue;
+                ResourceCellKey key = Key(card);
+                if (!changes.TryGetValue(key, out ResourceCellChange change))
+                {
+                    change = new ResourceCellChange();
+                    changes.Add(key, change);
+                }
+                change.BeforeAvailable++;
+                change.AfterAvailable++;
+            }
+
+            if (assignments != null)
+            foreach (KeyValuePair<CharacterAttackTarget, CharacterAttackTarget> assignment in assignments)
+            {
+                if (assignment.Key == null || assignment.Value == null) continue;
+                if (!combatants.TryGetValue(assignment.Key, out CharacterCombatantView attacker) ||
+                    !combatants.TryGetValue(assignment.Value, out CharacterCombatantView target)) continue;
+                for (int skillIndex = 0; skillIndex < 3; skillIndex++)
+                {
+                    if (!TryGetSkill(attacker.Definition, skillIndex, out SkillDefinition skill) ||
+                        !IsUsable(skill, resources) ||
+                        !TryGetRequirements(skill, out List<PatternRequirement> requirements)) continue;
+
+                    foreach (PatternRequirement requirement in requirements)
+                        foreach (CardObject card in resources)
+                            if (Matches(requirement, card) && changes.TryGetValue(Key(card), out ResourceCellChange relevant))
+                                relevant.IsRelevant = true;
+
+                    bool consumes = string.Equals(skill.resourceBehavior, "Consume", StringComparison.OrdinalIgnoreCase);
+                    if (consumes)
+                    {
+                        foreach (PatternRequirement requirement in requirements)
+                        {
+                            int needed = RequiredPaymentCount(requirement);
+                            int candidateCount = CandidateCount(requirement, resources, reserved);
+                            if (candidateCount > needed)
+                            {
+                                requiresConsumeSelection = true;
+                                foreach (CardObject card in resources)
+                                    if (card != null && !reserved.Contains(card) && Matches(requirement, card))
+                                        selectableConsumeCards.Add(card);
+                            }
+                        }
+                    }
+
+                    List<CardObject> payment = IsPaymentBehavior(skill.resourceBehavior)
+                        ? SelectPaymentCards(requirements, resources, reserved,
+                            consumes ? preferredConsumeCards : null)
+                        : new List<CardObject>();
+                    if (consumes) requiredConsumeCount += payment.Count;
+                    foreach (CardObject card in payment)
+                    {
+                        reserved.Add(card);
+                        ResourceCellChange change = changes[Key(card)];
+                        change.AfterAvailable = Math.Max(0, change.AfterAvailable - 1);
+                        if (string.Equals(skill.resourceBehavior, "Tap", StringComparison.OrdinalIgnoreCase))
+                            change.TapCount++;
+                        else
+                            change.ConsumeCount++;
+                    }
+                    skillPlans.Add(new SkillResourcePlan
+                    {
+                        Attacker = attacker,
+                        Target = target,
+                        SkillIndex = skillIndex,
+                        Skill = skill,
+                        Requirements = requirements,
+                        PaymentCards = payment
+                    });
+                }
+            }
+            return new ResourceActionPlan
+            {
+                Skills = skillPlans,
+                CellChanges = changes,
+                SelectableConsumeCards = new List<CardObject>(selectableConsumeCards),
+                RequiredConsumeCount = requiredConsumeCount,
+                RequiresConsumeSelection = requiresConsumeSelection
+            };
+        }
+
+        private static bool IsPaymentBehavior(string behavior) =>
+            string.Equals(behavior, "Tap", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(behavior, "Consume", StringComparison.OrdinalIgnoreCase);
+
+        private static List<CardObject> SelectPaymentCards(IReadOnlyList<PatternRequirement> requirements,
+            IReadOnlyList<CardObject> resources, ISet<CardObject> reserved,
+            IReadOnlyCollection<CardObject> preferredCards)
         {
             var selected = new List<CardObject>();
-            var seen = new HashSet<CardObject>();
-            foreach (PatternRequirement requirement in requirements)
+            var selectedSet = new HashSet<CardObject>();
+            var orderedRequirements = new List<PatternRequirement>(requirements);
+            orderedRequirements.Sort((left, right) =>
+                CandidateCount(left, resources, reserved).CompareTo(CandidateCount(right, resources, reserved)));
+            foreach (PatternRequirement requirement in orderedRequirements)
             {
-                int needed = requirement.Comparison == PatternComparison.GreaterThan ? requirement.Count + 1 : requirement.Count;
+                int needed = RequiredPaymentCount(requirement);
+                if (preferredCards != null)
+                {
+                    foreach (CardObject card in preferredCards)
+                    {
+                        if (needed <= 0) break;
+                        if (!TrySelectPaymentCard(card, requirement, reserved, selectedSet, selected)) continue;
+                        needed--;
+                    }
+                }
                 foreach (CardObject card in resources)
                 {
                     if (needed <= 0) break;
-                    if (!Matches(requirement, card)) continue;
-                    if (seen.Add(card)) selected.Add(card);
+                    if (!TrySelectPaymentCard(card, requirement, reserved, selectedSet, selected)) continue;
                     needed--;
                 }
             }
             return selected;
+        }
+
+        private static int RequiredPaymentCount(PatternRequirement requirement) =>
+            requirement.Comparison == PatternComparison.GreaterThan ? requirement.Count + 1 : requirement.Count;
+
+        private static bool TrySelectPaymentCard(CardObject card, PatternRequirement requirement,
+            ISet<CardObject> reserved, ISet<CardObject> selectedSet, ICollection<CardObject> selected)
+        {
+            if (card == null || reserved.Contains(card) || selectedSet.Contains(card) || !Matches(requirement, card))
+                return false;
+            selected.Add(card);
+            selectedSet.Add(card);
+            return true;
+        }
+
+        private static int CandidateCount(PatternRequirement requirement, IReadOnlyList<CardObject> resources,
+            ISet<CardObject> reserved)
+        {
+            int count = 0;
+            foreach (CardObject card in resources)
+                if (card != null && !reserved.Contains(card) && Matches(requirement, card)) count++;
+            return count;
+        }
+
+        private static ResourceCellKey Key(CardObject card) =>
+            new ResourceCellKey(card.Definition.Tier, card.Definition.Attribute);
+
+        private void HandleSkillHoverChanged(CharacterCombatantView view, int skillIndex, bool active)
+        {
+            if (!active || view == null || !view.IsAlly || gameFlow == null ||
+                !TryGetSkill(view.Definition, skillIndex, out SkillDefinition skill) ||
+                !TryGetRequirements(skill, out List<PatternRequirement> requirements))
+            {
+                SkillRequirementPreviewChanged?.Invoke(null);
+                return;
+            }
+            SkillRequirementPreviewChanged?.Invoke(new SkillRequirementPreview
+            {
+                Requirements = requirements,
+                AvailableResources = gameFlow.GetAvailableResourceCardsSnapshot()
+            });
         }
 
         private int EvaluateValue(string expression, List<CardObject> resources)
@@ -482,14 +634,14 @@ namespace FurrySocialCard.CardPresentation
             public readonly CharacterAttackTarget TargetTarget;
             public readonly CharacterCombatantView AttackerView;
             public readonly CharacterCombatantView TargetView;
-            public readonly IReadOnlyList<SkillDefinition> Skills;
+            public readonly IReadOnlyList<SkillResourcePlan> Skills;
 
             public AttackPlan(
                 CharacterAttackTarget attackerTarget,
                 CharacterAttackTarget targetTarget,
                 CharacterCombatantView attackerView,
                 CharacterCombatantView targetView,
-                IReadOnlyList<SkillDefinition> skills)
+                IReadOnlyList<SkillResourcePlan> skills)
             {
                 AttackerTarget = attackerTarget;
                 TargetTarget = targetTarget;

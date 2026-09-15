@@ -1,6 +1,6 @@
 {
     "schemaVersion": 1,
-    "dataVersion": "xlsx-20260911185228",
+    "dataVersion": "xlsx-20260915110037",
     "characters": [
         {
             "id": "char_T000",
@@ -81,7 +81,7 @@
             "displayName": "乖乖讓我爽，等等幹死你",
             "skillType": "active",
             "pattern": "[撫摸] >= 2 + [侵入] >= 2",
-            "resourceBehavior": "Tap",
+            "resourceBehavior": "Consume",
             "effectIds": [
                 "effect_TargetClimaxDown_Small",
                 "effect_Draw_1"
@@ -116,7 +116,7 @@
             "displayName": "好歹我也是個攻",
             "skillType": "active",
             "pattern": "[濕潤] >= 2 + [侵入] >= 1",
-            "resourceBehavior": "Tap",
+            "resourceBehavior": "Consume",
             "effectIds": [
                 "effect_TargetClimaxUp_Medium",
                 "effect_TargetClimaxDown_Small"
@@ -151,7 +151,7 @@
             "displayName": "我的小肉便器啊，要撐住喔",
             "skillType": "active",
             "pattern": "〈法術〉 >= 3 + [侵入] >= 3",
-            "resourceBehavior": "Tap",
+            "resourceBehavior": "Consume",
             "effectIds": [
                 "effect_TargetClimaxUp_Massive",
                 "effect_TargetClimaxDown_Massive"
@@ -256,98 +256,98 @@
             "id": "effect_SelfForceClimax",
             "effectType": "force_climax",
             "target": "self",
-            "value": "0",
+            "value": "0.0",
             "durationTurns": 0
         },
         {
             "id": "effect_TargetClimaxUp_Massive",
             "effectType": "climax_delta",
             "target": "enemy_single",
-            "value": "250",
+            "value": "250.0",
             "durationTurns": 0
         },
         {
             "id": "effect_TargetClimaxUp_Medium",
             "effectType": "climax_delta",
             "target": "enemy_single",
-            "value": "150",
+            "value": "150.0",
             "durationTurns": 0
         },
         {
             "id": "effect_TargetClimaxUp_Small",
             "effectType": "climax_delta",
             "target": "enemy_single",
-            "value": "50",
+            "value": "50.0",
             "durationTurns": 0
         },
         {
             "id": "effect_TargetClimaxDown_Massive",
             "effectType": "climax_delta",
             "target": "enemy_single",
-            "value": "-225",
+            "value": "-225.0",
             "durationTurns": 0
         },
         {
             "id": "effect_TargetClimaxDown_Medium",
             "effectType": "climax_delta",
             "target": "enemy_single",
-            "value": "-125",
+            "value": "-125.0",
             "durationTurns": 0
         },
         {
             "id": "effect_TargetClimaxDown_Small",
             "effectType": "climax_delta",
             "target": "enemy_single",
-            "value": "-25",
+            "value": "-25.0",
             "durationTurns": 0
         },
         {
             "id": "effect_SelfClimaxUp_Massive",
             "effectType": "climax_delta",
             "target": "self",
-            "value": "150",
+            "value": "150.0",
             "durationTurns": 0
         },
         {
             "id": "effect_SelfClimaxUp_Medium",
             "effectType": "climax_delta",
             "target": "self",
-            "value": "100",
+            "value": "100.0",
             "durationTurns": 0
         },
         {
             "id": "effect_SelfClimaxUp_Small",
             "effectType": "climax_delta",
             "target": "self",
-            "value": "50",
+            "value": "50.0",
             "durationTurns": 0
         },
         {
             "id": "effect_Draw_1",
             "effectType": "draw_card",
             "target": "self",
-            "value": "1",
+            "value": "1.0",
             "durationTurns": 0
         },
         {
             "id": "effect_TakeResource_1",
             "effectType": "resource_take",
             "target": "self",
-            "value": "1",
+            "value": "1.0",
             "durationTurns": 0
         },
         {
             "id": "effect_SelfClimaxUp_Time<動作>",
             "effectType": "climax_delta",
             "target": "self",
-            "value": "20+10*<動作>",
+            "value": "20+1*<動作>",
             "durationTurns": 0
         },
         {
             "id": "effect_TargetResourceConsume",
             "effectType": "resource_consume",
             "target": "",
-            "value": "1",
+            "value": "1.0",
             "durationTurns": 0
         },
         {

@@ -5,12 +5,16 @@ using DG.Tweening;
 using FurrySocialCard.CardData;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace FurrySocialCard.CardPresentation
 {
     public sealed class PlayerTurnDealController : MonoBehaviour
     {
+        [Header("Shared UI Scene")]
+        [SerializeField] private bool loadResourceUiAdditively = true;
+        [SerializeField] private string resourceUiSceneName = "ResourceUi";
         [SerializeField] private CardDeckController deckController;
         [SerializeField] private CardObject cardPrefab;
         [SerializeField] private RectTransform deckDisplayParent;
@@ -54,10 +58,38 @@ namespace FurrySocialCard.CardPresentation
 
         private void Awake()
         {
+            EnsureResourceUiSceneLoaded();
             startButton?.onClick.AddListener(StartNewGame);
             drawButton?.onClick.AddListener(DrawForPlayer);
             SetDrawButtonEnabled(false);
             if (turnInfoObject != null) turnInfoObject.SetActive(false);
+        }
+
+        private void EnsureResourceUiSceneLoaded()
+        {
+            if (!loadResourceUiAdditively || string.IsNullOrWhiteSpace(resourceUiSceneName)
+                || SceneManager.GetSceneByName(resourceUiSceneName).isLoaded)
+            {
+                return;
+            }
+
+            AsyncOperation operation = SceneManager.LoadSceneAsync(resourceUiSceneName, LoadSceneMode.Additive);
+            if (operation == null)
+            {
+                Debug.LogError($"Unable to load shared UI scene '{resourceUiSceneName}'. Add it to Build Settings.", this);
+                return;
+            }
+
+            operation.completed += _ =>
+            {
+                Scene uiScene = SceneManager.GetSceneByName(resourceUiSceneName);
+                if (!uiScene.isLoaded) return;
+                foreach (GameObject root in uiScene.GetRootGameObjects())
+                {
+                    foreach (Camera camera in root.GetComponentsInChildren<Camera>(true))
+                        camera.enabled = false;
+                }
+            };
         }
 
         private void OnDestroy()
@@ -103,7 +135,13 @@ namespace FurrySocialCard.CardPresentation
 
         public void BeginAttackPerformance()
         {
-            if (CurrentPhase == Phase.AttackSelection) SetPhase(Phase.AttackPerformance);
+            if (CurrentPhase == Phase.AttackSelection || CurrentPhase == Phase.ResourcePaymentSelection)
+                SetPhase(Phase.AttackPerformance);
+        }
+
+        public void BeginResourcePaymentSelection()
+        {
+            if (CurrentPhase == Phase.AttackSelection) SetPhase(Phase.ResourcePaymentSelection);
         }
 
         public void CompleteAttackSelection()
@@ -699,6 +737,7 @@ namespace FurrySocialCard.CardPresentation
             PlayerDraw,
             ResourceExchange,
             AttackSelection,
+            ResourcePaymentSelection,
             AttackPerformance,
             EnemyDraw,
             EnemyResourceExchange,
@@ -708,4 +747,3 @@ namespace FurrySocialCard.CardPresentation
         }
     }
 }
-
