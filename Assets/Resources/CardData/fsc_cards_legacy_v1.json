@@ -1,0 +1,398 @@
+{
+  "schemaVersion": 1,
+  "dataVersion": "fsc-initial-2026-08-26",
+  "cards": [
+    {
+      "id": "FSC-001",
+      "serialNumber": 1,
+      "color": "紅",
+      "shape": "三角形",
+      "points": 1
+    },
+    {
+      "id": "FSC-002",
+      "serialNumber": 2,
+      "color": "紅",
+      "shape": "三角形",
+      "points": 2
+    },
+    {
+      "id": "FSC-003",
+      "serialNumber": 3,
+      "color": "紅",
+      "shape": "三角形",
+      "points": 3
+    },
+    {
+      "id": "FSC-004",
+      "serialNumber": 4,
+      "color": "紅",
+      "shape": "三角形",
+      "points": 4
+    },
+    {
+      "id": "FSC-005",
+      "serialNumber": 5,
+      "color": "紅",
+      "shape": "圓形",
+      "points": 1
+    },
+    {
+      "id": "FSC-006",
+      "serialNumber": 6,
+      "color": "紅",
+      "shape": "圓形",
+      "points": 2
+    },
+    {
+      "id": "FSC-007",
+      "serialNumber": 7,
+      "color": "紅",
+      "shape": "圓形",
+      "points": 3
+    },
+    {
+      "id": "FSC-008",
+      "serialNumber": 8,
+      "color": "紅",
+      "shape": "圓形",
+      "points": 4
+    },
+    {
+      "id": "FSC-009",
+      "serialNumber": 9,
+      "color": "紅",
+      "shape": "方形",
+      "points": 1
+    },
+    {
+      "id": "FSC-010",
+      "serialNumber": 10,
+      "color": "紅",
+      "shape": "方形",
+      "points": 2
+    },
+    {
+      "id": "FSC-011",
+      "serialNumber": 11,
+      "color": "紅",
+      "shape": "方形",
+      "points": 3
+    },
+    {
+      "id": "FSC-012",
+      "serialNumber": 12,
+      "color": "紅",
+      "shape": "方形",
+      "points": 4
+    },
+    {
+      "id": "FSC-013",
+      "serialNumber": 13,
+      "color": "藍",
+      "shape": "三角形",
+      "points": 1
+    },
+    {
+      "id": "FSC-014",
+      "serialNumber": 14,
+      "color": "藍",
+      "shape": "三角形",
+      "points": 2
+    },
+    {
+      "id": "FSC-015",
+      "serialNumber": 15,
+      "color": "藍",
+      "shape": "三角形",
+      "points": 3
+    },
+    {
+      "id": "FSC-016",
+      "serialNumber": 16,
+      "color": "藍",
+      "shape": "三角形",
+      "points": 4
+    },
+    {
+      "id": "FSC-017",
+      "serialNumber": 17,
+      "color": "藍",
+      "shape": "圓形",
+      "points": 1
+    },
+    {
+      "id": "FSC-018",
+      "serialNumber": 18,
+      "color": "藍",
+      "shape": "圓形",
+      "points": 2
+    },
+    {
+      "id": "FSC-019",
+      "serialNumber": 19,
+      "color": "藍",
+      "shape": "圓形",
+      "points": 3
+    },
+    {
+      "id": "FSC-020",
+      "serialNumber": 20,
+      "color": "藍",
+      "shape": "圓形",
+      "points": 4
+    },
+    {
+      "id": "FSC-021",
+      "serialNumber": 21,
+      "color": "藍",
+      "shape": "方形",
+      "points": 1
+    },
+    {
+      "id": "FSC-022",
+      "serialNumber": 22,
+      "color": "藍",
+      "shape": "方形",
+      "points": 2
+    },
+    {
+      "id": "FSC-023",
+      "serialNumber": 23,
+      "color": "藍",
+      "shape": "方形",
+      "points": 3
+    },
+    {
+      "id": "FSC-024",
+      "serialNumber": 24,
+      "color": "藍",
+      "shape": "方形",
+      "points": 4
+    },
+    {
+      "id": "FSC-025",
+      "serialNumber": 25,
+      "color": "綠",
+      "shape": "三角形",
+      "points": 1
+    },
+    {
+      "id": "FSC-026",
+      "serialNumber": 26,
+      "color": "綠",
+      "shape": "三角形",
+      "points": 2
+    },
+    {
+      "id": "FSC-027",
+      "serialNumber": 27,
+      "color": "綠",
+      "shape": "三角形",
+      "points": 3
+    },
+    {
+      "id": "FSC-028",
+      "serialNumber": 28,
+      "color": "綠",
+      "shape": "三角形",
+      "points": 4
+    },
+    {
+      "id": "FSC-029",
+      "serialNumber": 29,
+      "color": "綠",
+      "shape": "圓形",
+      "points": 1
+    },
+    {
+      "id": "FSC-030",
+      "serialNumber": 30,
+      "color": "綠",
+      "shape": "圓形",
+      "points": 2
+    },
+    {
+      "id": "FSC-031",
+      "serialNumber": 31,
+      "color": "綠",
+      "shape": "圓形",
+      "points": 3
+    },
+    {
+      "id": "FSC-032",
+      "serialNumber": 32,
+      "color": "綠",
+      "shape": "圓形",
+      "points": 4
+    },
+    {
+      "id": "FSC-033",
+      "serialNumber": 33,
+      "color": "綠",
+      "shape": "方形",
+      "points": 1
+    },
+    {
+      "id": "FSC-034",
+      "serialNumber": 34,
+      "color": "綠",
+      "shape": "方形",
+      "points": 2
+    },
+    {
+      "id": "FSC-035",
+      "serialNumber": 35,
+      "color": "綠",
+      "shape": "方形",
+      "points": 3
+    },
+    {
+      "id": "FSC-036",
+      "serialNumber": 36,
+      "color": "綠",
+      "shape": "方形",
+      "points": 4
+    },
+    {
+      "id": "FSC-037",
+      "serialNumber": 37,
+      "color": "黃",
+      "shape": "三角形",
+      "points": 1
+    },
+    {
+      "id": "FSC-038",
+      "serialNumber": 38,
+      "color": "黃",
+      "shape": "三角形",
+      "points": 2
+    },
+    {
+      "id": "FSC-039",
+      "serialNumber": 39,
+      "color": "黃",
+      "shape": "三角形",
+      "points": 3
+    },
+    {
+      "id": "FSC-040",
+      "serialNumber": 40,
+      "color": "黃",
+      "shape": "三角形",
+      "points": 4
+    },
+    {
+      "id": "FSC-041",
+      "serialNumber": 41,
+      "color": "黃",
+      "shape": "圓形",
+      "points": 1
+    },
+    {
+      "id": "FSC-042",
+      "serialNumber": 42,
+      "color": "黃",
+      "shape": "圓形",
+      "points": 2
+    },
+    {
+      "id": "FSC-043",
+      "serialNumber": 43,
+      "color": "黃",
+      "shape": "圓形",
+      "points": 3
+    },
+    {
+      "id": "FSC-044",
+      "serialNumber": 44,
+      "color": "黃",
+      "shape": "圓形",
+      "points": 4
+    },
+    {
+      "id": "FSC-045",
+      "serialNumber": 45,
+      "color": "黃",
+      "shape": "方形",
+      "points": 1
+    },
+    {
+      "id": "FSC-046",
+      "serialNumber": 46,
+      "color": "黃",
+      "shape": "方形",
+      "points": 2
+    },
+    {
+      "id": "FSC-047",
+      "serialNumber": 47,
+      "color": "黃",
+      "shape": "方形",
+      "points": 3
+    },
+    {
+      "id": "FSC-048",
+      "serialNumber": 48,
+      "color": "黃",
+      "shape": "方形",
+      "points": 4
+    }
+  ],
+  "decks": [
+    {
+      "id": "FSC-INITIAL",
+      "displayName": "FSC 初始牌組",
+      "cardIds": [
+        "FSC-001",
+        "FSC-002",
+        "FSC-003",
+        "FSC-004",
+        "FSC-005",
+        "FSC-006",
+        "FSC-007",
+        "FSC-008",
+        "FSC-009",
+        "FSC-010",
+        "FSC-011",
+        "FSC-012",
+        "FSC-013",
+        "FSC-014",
+        "FSC-015",
+        "FSC-016",
+        "FSC-017",
+        "FSC-018",
+        "FSC-019",
+        "FSC-020",
+        "FSC-021",
+        "FSC-022",
+        "FSC-023",
+        "FSC-024",
+        "FSC-025",
+        "FSC-026",
+        "FSC-027",
+        "FSC-028",
+        "FSC-029",
+        "FSC-030",
+        "FSC-031",
+        "FSC-032",
+        "FSC-033",
+        "FSC-034",
+        "FSC-035",
+        "FSC-036",
+        "FSC-037",
+        "FSC-038",
+        "FSC-039",
+        "FSC-040",
+        "FSC-041",
+        "FSC-042",
+        "FSC-043",
+        "FSC-044",
+        "FSC-045",
+        "FSC-046",
+        "FSC-047",
+        "FSC-048"
+      ]
+    }
+  ]
+}
