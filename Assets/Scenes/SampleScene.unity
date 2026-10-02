@@ -752,7 +752,7 @@ MonoBehaviour:
   cardMoveDurationSeconds: 0.1
   dealIntervalSeconds: 0.12
   initialBattlefieldCards: 10
-  initialHandCards: 3
+  initialHandCards: 4
   handCardSpacing: 115
   resourceCardSpacing: 115
 --- !u!114 &533434921
@@ -818,6 +818,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   gameFlow: {fileID: 533434920}
   matchRule: 2
+  cardsPlayedPerTurn: 2
   chainDrawIntervalSeconds: 0.18
   maxChainDrawsPerTurn: 1
 --- !u!114 &533434925
@@ -907,6 +908,7 @@ MonoBehaviour:
   playerCharacterGroups: {fileID: 1801541466}
   enemyCharacterGroups: {fileID: 1873834372}
   initialHandCards: 8
+  cardsPlayedPerTurn: 1
   useRandomSeed: 1
   randomSeed: 24680
   decisionDelaySeconds: 0.25

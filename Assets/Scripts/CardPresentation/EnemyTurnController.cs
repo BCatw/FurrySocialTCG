@@ -19,6 +19,8 @@ namespace FurrySocialCard.CardPresentation
 
         [Header("Prototype AI")]
         [SerializeField, Min(0)] private int initialHandCards = 8;
+        [Tooltip("敵方每個資源交換階段最多打出的手牌張數。")]
+        [SerializeField, Min(1)] private int cardsPlayedPerTurn = 1;
         [SerializeField] private bool useRandomSeed = true;
         [SerializeField] private int randomSeed = 24680;
         [SerializeField, Min(0f)] private float decisionDelaySeconds = 0.25f;
@@ -76,7 +78,7 @@ namespace FurrySocialCard.CardPresentation
                 return;
             }
 
-            if (phase == PlayerTurnDealController.Phase.EnemyDraw && turnRoutine == null)
+            if (phase == PlayerTurnDealController.Phase.EnemyResourceExchange && turnRoutine == null)
             {
                 turnRoutine = StartCoroutine(RunTurn());
             }
@@ -94,12 +96,26 @@ namespace FurrySocialCard.CardPresentation
         private IEnumerator RunTurn()
         {
             yield return gameFlow.ShowTurnInfo("對手回合");
-            if (gameFlow.TryDrawDefinition(out CardDefinition drawn)) hand.Add(drawn);
+
+            if (hand.Count == 0)
+            {
+                for (int index = 0; index < initialHandCards; index++)
+                {
+                    if (!gameFlow.TryDrawDefinition(out CardDefinition definition)) break;
+                    hand.Add(definition);
+                }
+            }
+
             if (decisionDelaySeconds > 0f) yield return new WaitForSeconds(decisionDelaySeconds);
 
-            gameFlow.BeginEnemyResourceExchange();
-            if (hand.Count > 0)
+            int playCount = Mathf.Min(cardsPlayedPerTurn, hand.Count);
+            for (int playIndex = 0; playIndex < playCount; playIndex++)
             {
+                if (gameFlow.CurrentPhase != PlayerTurnDealController.Phase.EnemyResourceExchange)
+                {
+                    gameFlow.BeginEnemyResourceExchange();
+                }
+
                 int handIndex = random.Next(hand.Count);
                 CardDefinition played = hand[handIndex];
                 hand.RemoveAt(handIndex);
@@ -115,6 +131,11 @@ namespace FurrySocialCard.CardPresentation
                     yield return gameFlow.RevealEnemyCardToResource(played, eaten, null);
                     gameFlow.BeginEnemyRefill();
                     yield return RunChainDraws();
+                }
+
+                if (playIndex + 1 < playCount && decisionDelaySeconds > 0f)
+                {
+                    yield return new WaitForSeconds(decisionDelaySeconds);
                 }
             }
 
@@ -194,6 +215,7 @@ namespace FurrySocialCard.CardPresentation
             attackOrder.Clear();
             var players = new List<CharacterAttackTarget>();
             CollectActiveTargets(playerCharacterGroups, players);
+            players.RemoveAll(target => !characterBattle.CanTarget(target));
 
             if (enemyCharacterGroups == null || players.Count == 0) return;
             for (int index = 0; index < enemyCharacterGroups.childCount; index++)
@@ -201,7 +223,7 @@ namespace FurrySocialCard.CardPresentation
                 Transform child = CharacterSlotUtility.ResolveCharacter(enemyCharacterGroups.GetChild(index));
                 if (child == null || !child.gameObject.activeInHierarchy) continue;
                 CharacterAttackTarget enemy = child.GetComponent<CharacterAttackTarget>();
-                if (enemy != null)
+                if (enemy != null && characterBattle.CanAct(enemy))
                 {
                     attackTargets[enemy] = players[random.Next(players.Count)];
                     attackOrder.Add(enemy);

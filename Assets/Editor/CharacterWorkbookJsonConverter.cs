@@ -79,10 +79,19 @@ namespace FurrySocialCard.EditorTools
                     continue;
                 }
                 var name = Text(table, row, "displayName");
+                string staminaText = Text(table, row, "stamina");
+                int stamina = 1;
+                if (!string.IsNullOrEmpty(staminaText) && !PositiveInt(staminaText, out stamina))
+                {
+                    errors.Add($"Characters 第 {row.ExcelRowNumber} 列：Stamina 必須是正整數。");
+                    continue;
+                }
+                if (string.IsNullOrEmpty(staminaText)) warnings.Add($"角色「{id}」缺少 Stamina，暫用 1。");
                 if (string.IsNullOrEmpty(name)) warnings.Add($"角色「{id}」沒有 displayName。");
                 document.characters.Add(new CharacterDefinition
                 {
                     id = id, displayName = name, tags = Text(table, row, "tags"), climaxLimit = limit,
+                    stamina = stamina,
                     activeSkill1Id = Text(table, row, "activeSkill1Id"),
                     activeSkill2Id = Text(table, row, "activeSkill2Id"),
                     activeSkill3Id = Text(table, row, "activeSkill3Id"),

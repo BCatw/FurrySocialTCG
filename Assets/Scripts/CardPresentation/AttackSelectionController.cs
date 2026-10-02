@@ -37,6 +37,7 @@ namespace FurrySocialCard.CardPresentation
         private List<KeyValuePair<CharacterAttackTarget, CharacterAttackTarget>> pendingAssignments;
         private ResourceActionPlan pendingResourcePlan;
         private Coroutine buttonBindingRoutine;
+        private Coroutine attackRoutine;
 
         private void Awake()
         {
@@ -78,6 +79,12 @@ namespace FurrySocialCard.CardPresentation
 
         private void HandlePhaseChanged(PlayerTurnDealController.Phase phase)
         {
+            if (phase == PlayerTurnDealController.Phase.Initializing)
+            {
+                if (attackRoutine != null) StopCoroutine(attackRoutine);
+                attackRoutine = null;
+                if (attackEndButton != null) attackEndButton.interactable = true;
+            }
             bool isAttackSelection = phase == PlayerTurnDealController.Phase.AttackSelection;
             bool isAttackPerformance = phase == PlayerTurnDealController.Phase.AttackPerformance;
             bool isResourcePayment = phase == PlayerTurnDealController.Phase.ResourcePaymentSelection;
@@ -99,11 +106,12 @@ namespace FurrySocialCard.CardPresentation
             if (gameFlow == null || gameFlow.CurrentPhase != PlayerTurnDealController.Phase.AttackSelection) return;
             if (character.IsAlly)
             {
+                if (characterBattle != null && !characterBattle.CanAct(character)) return;
                 selectedAlly = selectedAlly == character ? null : character;
                 RefreshAttackGlows();
                 return;
             }
-            if (selectedAlly == null) return;
+            if (selectedAlly == null || (characterBattle != null && !characterBattle.CanTarget(character))) return;
 
             if (targets.TryGetValue(selectedAlly, out CharacterAttackTarget currentTarget) && currentTarget == character)
             {
@@ -136,7 +144,7 @@ namespace FurrySocialCard.CardPresentation
                 RefreshSelectableResourceCards();
                 return;
             }
-            StartCoroutine(CompleteAttackSelectionRoutine(assignments, plan));
+            attackRoutine = StartCoroutine(CompleteAttackSelectionRoutine(assignments, plan));
         }
 
         private IEnumerator CompleteAttackSelectionRoutine(
@@ -184,7 +192,7 @@ namespace FurrySocialCard.CardPresentation
             pendingResourcePlan = characterBattle?.RefreshAttackPreview(
                 pendingAssignments, true, selectedConsumeCards) ?? pendingResourcePlan;
             ClearSelectableResourceCards();
-            StartCoroutine(CompleteAttackSelectionRoutine(pendingAssignments, pendingResourcePlan));
+            attackRoutine = StartCoroutine(CompleteAttackSelectionRoutine(pendingAssignments, pendingResourcePlan));
         }
 
         private void RefreshSelectableResourceCards()
@@ -308,7 +316,7 @@ namespace FurrySocialCard.CardPresentation
                 if (ally == null) continue;
                 bool isAssigned = targets.ContainsKey(ally);
                 bool isSelected = selectedAlly == ally;
-                ally.SetAttackGlow(true, isAssigned || isSelected ? assignedAttackColor : unassignedAttackColor);
+                ally.SetAttackGlow(characterBattle == null || characterBattle.CanAct(ally), isAssigned || isSelected ? assignedAttackColor : unassignedAttackColor);
                 ally.SetAttackOffset(isAssigned, assignedMoveDistance, assignedMoveDuration);
             }
         }

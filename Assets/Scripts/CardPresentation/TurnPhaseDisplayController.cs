@@ -11,6 +11,7 @@ namespace FurrySocialCard.CardPresentation
         [Header("References")]
         [SerializeField] private PlayerTurnDealController gameFlow;
         [SerializeField] private ResourceExchangeController resourceExchange;
+        [SerializeField] private CharacterBattleController characterBattle;
         [SerializeField] private GameObject turnPhasePrefab;
         [SerializeField] private GameObject playerTurnPhase;
         [SerializeField] private GameObject enemyTurnPhase;
@@ -29,6 +30,8 @@ namespace FurrySocialCard.CardPresentation
         {
             FindReferences();
             PrepareViews();
+            if (characterBattle != null) characterBattle.TokensChanged += RefreshTokens;
+            RefreshTokenSnapshot();
             HideBoth();
 
             if (gameFlow != null)
@@ -43,8 +46,23 @@ namespace FurrySocialCard.CardPresentation
             }
         }
 
+        private void Start() => RefreshTokenSnapshot();
+
+        private void RefreshTokenSnapshot()
+        {
+            RefreshTokens(characterBattle != null ? characterBattle.PlayerTokens : 0,
+                characterBattle != null ? characterBattle.EnemyTokens : 0);
+        }
+
+        private void RefreshTokens(int player, int enemy)
+        {
+            playerView.SetTokens(player);
+            enemyView.SetTokens(enemy);
+        }
+
         private void OnDestroy()
         {
+            if (characterBattle != null) characterBattle.TokensChanged -= RefreshTokens;
             if (gameFlow != null) gameFlow.PhaseChanged -= HandlePhaseChanged;
             if (resourceExchange != null)
             {
@@ -57,8 +75,10 @@ namespace FurrySocialCard.CardPresentation
         {
             switch (phase)
             {
-                case PlayerTurnDealController.Phase.PlayerDraw:
-                    ShowPlayer("TURN", playerBlue);
+                case PlayerTurnDealController.Phase.GameOver:
+                    playerView.Set(false, string.Empty, inactiveGray, true);
+                    enemyView.Set(false, string.Empty, inactiveGray, true);
+                    RefreshTokenSnapshot();
                     break;
                 case PlayerTurnDealController.Phase.ResourceExchange:
                     ShowPlayer("PLAY", playerBlue);
@@ -69,9 +89,6 @@ namespace FurrySocialCard.CardPresentation
                     break;
                 case PlayerTurnDealController.Phase.AttackPerformance:
                     ShowPlayer("ATK", performanceRed);
-                    break;
-                case PlayerTurnDealController.Phase.EnemyDraw:
-                    ShowEnemy("DRAW", playerBlue);
                     break;
                 case PlayerTurnDealController.Phase.EnemyResourceExchange:
                     ShowEnemy("PLAY", playerBlue);
@@ -157,6 +174,7 @@ namespace FurrySocialCard.CardPresentation
         {
             if (gameFlow == null) gameFlow = GetComponent<PlayerTurnDealController>();
             if (resourceExchange == null) resourceExchange = GetComponent<ResourceExchangeController>();
+            if (characterBattle == null) characterBattle = GetComponent<CharacterBattleController>();
             if (playerTurnPhase == null) playerTurnPhase = FindSceneObject("PlayerTurnPhase");
             if (enemyTurnPhase == null) enemyTurnPhase = FindSceneObject("EnemyTurnPhase");
 
@@ -181,22 +199,51 @@ namespace FurrySocialCard.CardPresentation
         private readonly struct PhaseView
         {
             private readonly GameObject root;
-            private readonly Image background;
+            private readonly UnityEngine.UI.Image background;
             private readonly TMP_Text label;
+            private readonly GameObject tokenRoot;
+            private readonly TMP_Text tokenLabel;
 
             public PhaseView(GameObject root)
             {
                 this.root = root;
-                background = root != null ? root.GetComponentInChildren<Image>(true) : null;
-                label = root != null ? root.GetComponentInChildren<TMP_Text>(true) : null;
+                Transform viewRoot = root != null ? root.transform : null;
+                if (viewRoot != null)
+                    foreach (Transform candidate in viewRoot.GetComponentsInChildren<Transform>(true))
+                        if (candidate.Find("Image") != null && candidate.Find("Text (TMP)") != null)
+                        {
+                            viewRoot = candidate;
+                            break;
+                        }
+                background = viewRoot?.Find("Image")?.GetComponent<UnityEngine.UI.Image>();
+                label = viewRoot?.Find("Text (TMP)")?.GetComponent<TMP_Text>();
+                tokenRoot = viewRoot?.Find("TokenCount")?.gameObject;
+                tokenLabel = tokenRoot != null ? tokenRoot.GetComponentInChildren<TMP_Text>(true) : null;
+                if (tokenRoot != null)
+                    foreach (UnityEngine.UI.Graphic graphic in tokenRoot.GetComponentsInChildren<UnityEngine.UI.Graphic>(true))
+                        graphic.raycastTarget = false;
             }
 
-            public void Set(bool visible, string text, Color color)
+            public void SetTokens(int count)
+            {
+                if (tokenLabel != null) tokenLabel.text = count.ToString();
+            }
+
+            public void Set(bool visible, string text, Color color, bool tokenOnly = false)
             {
                 if (root == null) return;
-                root.SetActive(visible);
-                if (background != null) background.color = color;
-                if (label != null) label.text = text;
+                root.SetActive(visible || tokenOnly);
+                if (background != null)
+                {
+                    background.gameObject.SetActive(visible);
+                    background.color = color;
+                }
+                if (label != null)
+                {
+                    label.gameObject.SetActive(visible);
+                    label.text = text;
+                }
+                if (tokenRoot != null) tokenRoot.SetActive(visible || tokenOnly);
             }
         }
     }

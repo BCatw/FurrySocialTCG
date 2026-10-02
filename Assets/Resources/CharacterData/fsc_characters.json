@@ -1,12 +1,13 @@
 {
     "schemaVersion": 1,
-    "dataVersion": "xlsx-20260915110037",
+    "dataVersion": "xlsx-20261002093825",
     "characters": [
         {
             "id": "char_T000",
             "displayName": "阿飄",
             "tags": "Top",
             "climaxLimit": 500,
+            "stamina": 2,
             "activeSkill1Id": "skill_T000_1",
             "activeSkill2Id": "skill_T000_2",
             "activeSkill3Id": "skill_T000_3",
@@ -17,6 +18,7 @@
             "displayName": "鳴雷起",
             "tags": "Shibari",
             "climaxLimit": 300,
+            "stamina": 2,
             "activeSkill1Id": "skill_T001_1",
             "activeSkill2Id": "skill_T001_2",
             "activeSkill3Id": "skill_T001_3",
@@ -27,6 +29,7 @@
             "displayName": "雷命",
             "tags": "Sadism",
             "climaxLimit": 500,
+            "stamina": 1,
             "activeSkill1Id": "skill_T002_1",
             "activeSkill2Id": "skill_T002_2",
             "activeSkill3Id": "skill_T002_3",
@@ -37,6 +40,7 @@
             "displayName": "肯滋",
             "tags": "Toy",
             "climaxLimit": 200,
+            "stamina": 1,
             "activeSkill1Id": "skill_T003_1",
             "activeSkill2Id": "skill_T003_2",
             "activeSkill3Id": "skill_T003_3",
@@ -47,6 +51,7 @@
             "displayName": "內克",
             "tags": "Slime",
             "climaxLimit": 500,
+            "stamina": 1,
             "activeSkill1Id": "skill_T004_1",
             "activeSkill2Id": "skill_T004_2",
             "activeSkill3Id": "skill_T004_3",
@@ -57,6 +62,7 @@
             "displayName": "三王",
             "tags": "Buttom",
             "climaxLimit": 300,
+            "stamina": 1,
             "activeSkill1Id": "skill_T005_1",
             "activeSkill2Id": "skill_T005_2",
             "activeSkill3Id": "skill_T005_3",
@@ -71,8 +77,7 @@
             "pattern": "〈獸徵〉 >= 2 + [侵入] >= 4",
             "resourceBehavior": "Consume",
             "effectIds": [
-                "effect_SelfForceClimax",
-                "effect_TargetClimaxDown_Medium"
+                "effect_TargetClimaxUp_Massive"
             ],
             "designStatus": "draft"
         },
@@ -83,8 +88,7 @@
             "pattern": "[撫摸] >= 2 + [侵入] >= 2",
             "resourceBehavior": "Consume",
             "effectIds": [
-                "effect_TargetClimaxDown_Small",
-                "effect_Draw_1"
+                "effect_TargetClimaxUp_Massive"
             ],
             "designStatus": "draft"
         },
@@ -92,10 +96,10 @@
             "id": "skill_T000_3",
             "displayName": "我們慢慢來",
             "skillType": "active",
-            "pattern": "〈動作〉 >= 2 + [侵入] >= 2",
+            "pattern": "[侵入] >= 1",
             "resourceBehavior": "Check",
             "effectIds": [
-                "effect_SelfClimaxUp_Time<動作>"
+                "effect_TargetClimaxUp_Massive"
             ],
             "designStatus": "draft"
         },
@@ -106,8 +110,7 @@
             "pattern": "[束縛] >= 4 + 〈器具〉[束縛] >= 1",
             "resourceBehavior": "Consume",
             "effectIds": [
-                "effect_TargetClimaxUp_Massive",
-                "effect_TargetClimaxDown_Medium"
+                "effect_TargetClimaxUp_Massive"
             ],
             "designStatus": "draft"
         },
@@ -118,8 +121,7 @@
             "pattern": "[濕潤] >= 2 + [侵入] >= 1",
             "resourceBehavior": "Consume",
             "effectIds": [
-                "effect_TargetClimaxUp_Medium",
-                "effect_TargetClimaxDown_Small"
+                "effect_TargetClimaxUp_Massive"
             ],
             "designStatus": "draft"
         },
@@ -127,10 +129,10 @@
             "id": "skill_T001_3",
             "displayName": "我的主人",
             "skillType": "active",
-            "pattern": "〈動作〉 >= 2 + [束縛] >= 2",
+            "pattern": "[束縛] >= 1",
             "resourceBehavior": "Check",
             "effectIds": [
-                "effect_SelfClimaxUp_Time<動作>"
+                "effect_TargetClimaxUp_Massive"
             ],
             "designStatus": "draft"
         },
@@ -141,8 +143,7 @@
             "pattern": "〈法術〉 >= 3",
             "resourceBehavior": "Consume",
             "effectIds": [
-                "effect_SelfClimaxUp_Small",
-                "effect_TargetResourceConsume"
+                "effect_TargetClimaxUp_Massive"
             ],
             "designStatus": "draft"
         },
@@ -153,8 +154,7 @@
             "pattern": "〈法術〉 >= 3 + [侵入] >= 3",
             "resourceBehavior": "Consume",
             "effectIds": [
-                "effect_TargetClimaxUp_Massive",
-                "effect_TargetClimaxDown_Massive"
+                "effect_TargetClimaxUp_Massive"
             ],
             "designStatus": "draft"
         },
@@ -162,10 +162,10 @@
             "id": "skill_T002_3",
             "displayName": "小傢伙乖",
             "skillType": "active",
-            "pattern": "〈動作〉 >= 2 + [撫摸] >= 2",
+            "pattern": "[撫摸] >= 1",
             "resourceBehavior": "Check",
             "effectIds": [
-                "effect_SelfClimaxUp_Time<動作>"
+                "effect_TargetClimaxUp_Massive"
             ],
             "designStatus": "draft"
         },
@@ -263,7 +263,7 @@
             "id": "effect_TargetClimaxUp_Massive",
             "effectType": "climax_delta",
             "target": "enemy_single",
-            "value": "250.0",
+            "value": "1000.0",
             "durationTurns": 0
         },
         {

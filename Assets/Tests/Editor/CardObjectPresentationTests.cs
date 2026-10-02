@@ -12,6 +12,65 @@ namespace FurrySocialCard.Tests.Editor
     public sealed class CardObjectPresentationTests
     {
         [Test]
+        public void StaminaBadgeTracksActualStateAndResetButNotPreview()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/CharacterObjGroup.prefab");
+            GameObject instance = Object.Instantiate(prefab);
+            try
+            {
+                var view = instance.GetComponent<CharacterCombatantView>();
+                if (view == null) view = instance.AddComponent<CharacterCombatantView>();
+                view.Bind(new FurrySocialCard.CharacterData.CharacterDefinition
+                    { id = "test", climaxLimit = 100, stamina = 2 }, null, null, true);
+                TMP_Text badge = instance.transform.Find("Stamina").GetComponentInChildren<TMP_Text>(true);
+                Assert.AreEqual("2", badge.text);
+                var preview = view.BattleState.Copy();
+                preview.Apply(100, false, true);
+                view.SetStatePreview(preview);
+                Assert.AreEqual("2", badge.text);
+                view.ApplyClimax(100, false, true);
+                Assert.AreEqual("1", badge.text);
+                view.ResetBattleState();
+                Assert.AreEqual("2", badge.text);
+                foreach (Graphic graphic in instance.transform.Find("Stamina").GetComponentsInChildren<Graphic>(true))
+                    Assert.IsFalse(graphic.raycastTarget);
+            }
+            finally { Object.DestroyImmediate(instance); }
+        }
+
+        [Test]
+        public void TurnPhaseTokenIsSeparateFromPhaseAndSurvivesGameOver()
+        {
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/TurnPhase.prefab");
+            GameObject instance = Object.Instantiate(prefab);
+            try
+            {
+                var type = typeof(TurnPhaseDisplayController).GetNestedType("PhaseView",
+                    System.Reflection.BindingFlags.NonPublic);
+                object view = System.Activator.CreateInstance(type, new object[] { instance });
+                TMP_Text token = instance.transform.Find("TokenCount").GetComponentInChildren<TMP_Text>(true);
+                TMP_Text phase = instance.transform.Find("Text (TMP)").GetComponent<TMP_Text>();
+                type.GetMethod("SetTokens").Invoke(view, new object[] { 3 });
+                type.GetMethod("Set").Invoke(view, new object[] { true, "PLAY", Color.blue, false });
+                Assert.AreEqual("3", token.text);
+                Assert.AreEqual("PLAY", phase.text);
+                type.GetMethod("Set").Invoke(view, new object[] { false, "", Color.gray, true });
+                Assert.IsTrue(token.gameObject.activeInHierarchy);
+                Assert.IsFalse(phase.gameObject.activeInHierarchy);
+                Assert.IsFalse(instance.transform.Find("Image").gameObject.activeInHierarchy);
+                type.GetMethod("SetTokens").Invoke(view, new object[] { 0 });
+                type.GetMethod("Set").Invoke(view, new object[] { false, "", Color.gray, false });
+                Assert.IsFalse(instance.activeSelf);
+                type.GetMethod("Set").Invoke(view, new object[] { true, "PLAY", Color.blue, false });
+                Assert.AreEqual("0", token.text);
+                Assert.IsTrue(phase.gameObject.activeInHierarchy);
+                foreach (Graphic graphic in instance.transform.Find("TokenCount").GetComponentsInChildren<Graphic>(true))
+                    Assert.IsFalse(graphic.raycastTarget);
+            }
+            finally { Object.DestroyImmediate(instance); }
+        }
+
+        [Test]
         public void NewAttributes_GenerateDistinctSpritesAndDisplayText()
         {
             GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/CardGroup.prefab");

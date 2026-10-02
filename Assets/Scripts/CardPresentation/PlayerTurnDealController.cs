@@ -52,6 +52,21 @@ namespace FurrySocialCard.CardPresentation
         public IReadOnlyList<CardObject> ResourceCards => resourceCards;
         public IReadOnlyList<CardObject> EnemyResourceCards => enemyResourceCards;
         public bool IsAnimating { get; private set; }
+        public bool IsDeckEmpty => deckController != null && deckController.IsReady && deckController.RemainingCount == 0;
+        public void EndGame(string result)
+        {
+            SetDrawButtonEnabled(false);
+            SetPhase(Phase.GameOver);
+            if (turnInfoText != null) turnInfoText.text = result;
+            if (turnInfoObject != null)
+            {
+                // Keep StartBtn usable while the persistent result is visible.
+                CanvasGroup group = turnInfoObject.GetComponent<CanvasGroup>();
+                if (group == null) group = turnInfoObject.AddComponent<CanvasGroup>();
+                group.blocksRaycasts = false;
+                turnInfoObject.SetActive(true);
+            }
+        }
         public event Action<Phase> PhaseChanged;
         public event Action ResourceCardsChanged;
         public event Action EnemyResourceCardsChanged;
@@ -152,7 +167,9 @@ namespace FurrySocialCard.CardPresentation
             }
 
             UntapAllResources();
-            SetPhase(Phase.EnemyDraw);
+            GetComponent<CharacterBattleController>()?.CompleteSideTurn(true);
+            if (CurrentPhase == Phase.GameOver) return;
+            SetPhase(Phase.EnemyResourceExchange);
         }
 
         public void BeginEnemyResourceExchange() => SetPhase(Phase.EnemyResourceExchange);
@@ -164,6 +181,8 @@ namespace FurrySocialCard.CardPresentation
         {
             if (CurrentPhase != Phase.EnemyAttackPerformance) return;
             UntapAllEnemyResources();
+            GetComponent<CharacterBattleController>()?.CompleteSideTurn(false);
+            if (CurrentPhase == Phase.GameOver) return;
             SetDrawButtonEnabled(false);
             activeRoutine = StartCoroutine(BeginPlayerTurnRoutine());
         }
@@ -330,7 +349,7 @@ namespace FurrySocialCard.CardPresentation
             secondRect.position = secondStart;
 
             IsAnimating = true;
-            Sequence sequence = DOTween.Sequence().SetLink(gameObject);
+            Sequence sequence = DOTween.Sequence().SetTarget(gameObject).SetLink(gameObject);
             sequence.Join(firstRect.DOMove(firstTarget, cardMoveDurationSeconds).SetEase(Ease.InOutQuad));
             sequence.Join(secondRect.DOMove(secondTarget, cardMoveDurationSeconds).SetEase(Ease.InOutQuad));
             yield return sequence.WaitForCompletion();
@@ -391,7 +410,7 @@ namespace FurrySocialCard.CardPresentation
             firstRect.position = firstStart;
             secondRect.position = secondStart;
             IsAnimating = true;
-            Sequence sequence = DOTween.Sequence().SetLink(gameObject);
+            Sequence sequence = DOTween.Sequence().SetTarget(gameObject).SetLink(gameObject);
             sequence.Join(firstRect.DOMove(firstTarget, cardMoveDurationSeconds).SetEase(Ease.InOutQuad));
             sequence.Join(secondRect.DOMove(secondTarget, cardMoveDurationSeconds).SetEase(Ease.InOutQuad));
             yield return sequence.WaitForCompletion();
@@ -404,10 +423,14 @@ namespace FurrySocialCard.CardPresentation
 
         private IEnumerator BeginPlayerTurnRoutine()
         {
-            SetPhase(Phase.PlayerDraw);
             yield return ShowTurnInfo("玩家回合");
-            yield return DrawCardToZone(playerHandParent, Zone.Hand, null);
-            SetPhase(Phase.ResourceExchange);
+
+            if (handCards.Count == 0)
+            {
+                yield return DealCards(initialHandCards, playerHandParent, Zone.Hand);
+            }
+
+            SetPhase(handCards.Count > 0 ? Phase.ResourceExchange : Phase.AttackSelection);
             activeRoutine = null;
             SetDrawButtonEnabled(deckController != null && deckController.RemainingCount > 0);
         }
@@ -716,6 +739,7 @@ namespace FurrySocialCard.CardPresentation
 
         private void SetPhase(Phase phase)
         {
+            if (CurrentPhase == Phase.GameOver && phase != Phase.Initializing) return;
             CurrentPhase = phase;
             PhaseChanged?.Invoke(phase);
         }
@@ -729,17 +753,16 @@ namespace FurrySocialCard.CardPresentation
 
         public enum Phase
         {
-            WaitingForStart,
+            GameOver = 100,
+            WaitingForStart = 0,
             Initializing,
             DealingBattlefield,
             DealingPlayerHand,
             DealingEnemyHand,
-            PlayerDraw,
             ResourceExchange,
             AttackSelection,
             ResourcePaymentSelection,
             AttackPerformance,
-            EnemyDraw,
             EnemyResourceExchange,
             EnemyRefill,
             EnemyAttackSelection,

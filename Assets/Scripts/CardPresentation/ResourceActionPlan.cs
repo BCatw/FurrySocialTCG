@@ -38,12 +38,16 @@ namespace FurrySocialCard.CardPresentation
         public CharacterCombatantView Target;
         public int SkillIndex;
         public SkillDefinition Skill;
+        public int SelfDelta;
+        public int TargetDelta;
         public IReadOnlyList<PatternRequirement> Requirements;
         public IReadOnlyList<CardObject> PaymentCards;
     }
 
     public sealed class ResourceActionPlan
     {
+        public IReadOnlyDictionary<CharacterCombatantView, CharacterBattleState> ProjectedStates;
+        public IReadOnlyDictionary<CharacterCombatantView, string> CancelledActions;
         public IReadOnlyList<SkillResourcePlan> Skills;
         public IReadOnlyDictionary<ResourceCellKey, ResourceCellChange> CellChanges;
         public IReadOnlyList<CardObject> SelectableConsumeCards;

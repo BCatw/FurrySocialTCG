@@ -11,6 +11,8 @@ namespace FurrySocialCard.CardPresentation
     {
         [SerializeField] private PlayerTurnDealController gameFlow;
         [SerializeField] private MatchRule matchRule = MatchRule.SameTierAndAttribute;
+        [Tooltip("玩家每個資源交換階段最多打出的手牌張數。")]
+        [SerializeField, Min(1)] private int cardsPlayedPerTurn = 1;
         [SerializeField, Min(0f)] private float chainDrawIntervalSeconds = 0.18f;
         [Tooltip("每次手牌成功吃牌後，最多可以連續補幾張牌；設為 0 時不補牌。")]
         [SerializeField, Min(0)] private int maxChainDrawsPerTurn = 3;
@@ -26,6 +28,7 @@ namespace FurrySocialCard.CardPresentation
         private CardObject pendingDrawnCard;
         private CardObject selectedDrawCandidate;
         private Coroutine exchangeRoutine;
+        private int cardsPlayedThisTurn;
 
         private void OnEnable()
         {
@@ -52,6 +55,7 @@ namespace FurrySocialCard.CardPresentation
         {
             if (phase == PlayerTurnDealController.Phase.ResourceExchange)
             {
+                cardsPlayedThisTurn = 0;
                 RefreshHandMatchHints();
                 return;
             }
@@ -145,8 +149,7 @@ namespace FurrySocialCard.CardPresentation
             if (eatenCard == null)
             {
                 yield return gameFlow.MoveHandCardToBattlefieldAnimated(playedCard);
-                exchangeRoutine = null;
-                gameFlow.CompleteResourceExchange();
+                FinishPlayOrContinue();
                 yield break;
             }
 
@@ -154,8 +157,21 @@ namespace FurrySocialCard.CardPresentation
             RefillStarted?.Invoke();
             yield return ResolveChainDraws();
             RefillCompleted?.Invoke();
+            FinishPlayOrContinue();
+        }
+
+        private void FinishPlayOrContinue()
+        {
+            cardsPlayedThisTurn++;
             exchangeRoutine = null;
-            gameFlow.CompleteResourceExchange();
+
+            if (cardsPlayedThisTurn >= cardsPlayedPerTurn || gameFlow.HandCards.Count == 0)
+            {
+                gameFlow.CompleteResourceExchange();
+                return;
+            }
+
+            RefreshHandMatchHints();
         }
 
         private IEnumerator ResolveChainDraws()

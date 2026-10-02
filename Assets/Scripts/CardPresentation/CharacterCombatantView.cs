@@ -12,6 +12,8 @@ namespace FurrySocialCard.CardPresentation
         [SerializeField] private Slider climaxBar;
         [SerializeField] private Slider climaxPreviewBar;
         [SerializeField] private TMP_Text climaxValueText;
+        [SerializeField] private TMP_Text battleStatusText;
+        [SerializeField] private TMP_Text staminaText;
         [SerializeField] private TMP_Text[] skillTexts = new TMP_Text[3];
         [SerializeField] private TMP_Text[] skillSelfClimaxTexts = new TMP_Text[3];
         [SerializeField] private TMP_Text[] skillTargetClimaxTexts = new TMP_Text[3];
@@ -20,15 +22,36 @@ namespace FurrySocialCard.CardPresentation
         private readonly Color[] normalSkillColors = new Color[3];
         public event Action<CharacterCombatantView, int, bool> SkillHoverChanged;
         public CharacterDefinition Definition { get; private set; }
-        public int CurrentClimax { get; private set; }
+        public CharacterBattleState BattleState { get; private set; }
+        public int CurrentClimax => BattleState?.Climax ?? 0;
         public bool IsAlly { get; private set; }
+        public int RemainingStamina => BattleState?.Stamina ?? 0;
+        public int RestOwnerTurns => BattleState?.RestOwnerTurns ?? 0;
+        public bool IsSaint => RemainingStamina <= 0;
+        public bool CanAct => !IsSaint && RestOwnerTurns == 0;
+        public void ResetBattleState()
+        {
+            BattleState = new CharacterBattleState(Definition.climaxLimit, Definition.stamina);
+            ClearAttackPreview();
+        }
+        public void CompleteOwnerTurn()
+        {
+            BattleState.CompleteOwnerTurn();
+            RefreshClimaxBar();
+        }
+        public bool ApplyClimax(int delta, bool force, bool ownTurn)
+        {
+            bool reached = BattleState.Apply(delta, force, ownTurn);
+            RefreshClimaxBar();
+            return reached;
+        }
 
         public void Bind(CharacterDefinition definition, SkillDefinition[] skills, Sprite portrait, bool isAlly)
         {
             FindReferences();
             Definition = definition;
             IsAlly = isAlly;
-            CurrentClimax = 0;
+            BattleState = new CharacterBattleState(definition.climaxLimit, definition.stamina);
             if (portraitImage != null)
             {
                 portraitImage.sprite = portrait;
@@ -53,20 +76,6 @@ namespace FurrySocialCard.CardPresentation
             skillTexts[index].color = available ? usableSkillColor : normalSkillColors[index];
         }
 
-        public void AddClimax(int delta)
-        {
-            if (Definition == null) return;
-            CurrentClimax = Mathf.Clamp(CurrentClimax + delta, 0, Mathf.Max(1, Definition.climaxLimit));
-            RefreshClimaxBar();
-        }
-
-        public void ForceClimax()
-        {
-            if (Definition == null) return;
-            CurrentClimax = Mathf.Max(1, Definition.climaxLimit);
-            RefreshClimaxBar();
-        }
-
         public void SetClimaxPreview(int projectedClimax, bool visible)
         {
             if (Definition == null) return;
@@ -84,6 +93,19 @@ namespace FurrySocialCard.CardPresentation
                 climaxValueText.text = visible
                     ? $"{CurrentClimax} ({delta:+#;-#;0}) / {maximum}"
                     : $"{CurrentClimax} / {maximum}";
+        }
+
+        public void SetStatePreview(CharacterBattleState projected)
+        {
+            bool changed = projected.Climax != CurrentClimax || projected.Stamina != RemainingStamina;
+            SetClimaxPreview(projected.Climax, changed);
+            if (battleStatusText != null && projected.Stamina != RemainingStamina)
+                battleStatusText.text = $"Stamina {RemainingStamina} → {projected.Stamina} | 預計{(projected.IsSaint ? "聖人" : "休息")}（Token +1）";
+        }
+
+        public void SetActionCancelledPreview(string reason)
+        {
+            if (battleStatusText != null) battleStatusText.text = reason;
         }
 
         public void SetSkillClimaxPreview(int index, int selfDelta, int targetDelta, bool visible)
@@ -109,6 +131,28 @@ namespace FurrySocialCard.CardPresentation
             if (climaxBar == null) climaxBar = transform.Find("ClimaxBar")?.GetComponent<Slider>();
             if (climaxPreviewBar == null) climaxPreviewBar = transform.Find("ClimaxBar_Preview")?.GetComponent<Slider>();
             if (climaxValueText == null) climaxValueText = transform.Find("ClimaxBar/Value")?.GetComponentInChildren<TMP_Text>(true);
+            Transform staminaRoot = transform.Find("Stamina");
+            if (staminaText == null) staminaText = staminaRoot?.GetComponentInChildren<TMP_Text>(true);
+            if (staminaRoot != null)
+                foreach (UnityEngine.UI.Graphic graphic in staminaRoot.GetComponentsInChildren<UnityEngine.UI.Graphic>(true))
+                    graphic.raycastTarget = false;
+            if (staminaText != null) staminaText.raycastTarget = false;
+            if (battleStatusText == null && climaxValueText != null)
+            {
+                var status = new GameObject("BattleStatus", typeof(RectTransform), typeof(TextMeshProUGUI));
+                status.transform.SetParent(transform, false);
+                battleStatusText = status.GetComponent<TextMeshProUGUI>();
+                battleStatusText.font = climaxValueText.font;
+                battleStatusText.fontSize = 22f;
+                battleStatusText.alignment = TextAlignmentOptions.Center;
+                battleStatusText.raycastTarget = false;
+                var rect = (RectTransform)status.transform;
+                rect.anchorMin = new Vector2(0f, 1f);
+                rect.anchorMax = new Vector2(1f, 1f);
+                rect.pivot = new Vector2(0.5f, 0f);
+                rect.sizeDelta = new Vector2(0f, 60f);
+                rect.anchoredPosition = new Vector2(0f, 4f);
+            }
             for (int index = 0; index < skillTexts.Length; index++)
             {
                 Transform skillRoot = transform.Find($"SkillGroup/Skill_{index + 1}");
@@ -127,12 +171,18 @@ namespace FurrySocialCard.CardPresentation
 
         private void RefreshClimaxBar()
         {
-            if (climaxBar == null || Definition == null) return;
-            climaxBar.minValue = 0f;
-            climaxBar.maxValue = Mathf.Max(1, Definition.climaxLimit);
-            climaxBar.value = CurrentClimax;
+            if (Definition == null) return;
+            if (climaxBar != null)
+            {
+                climaxBar.minValue = 0f;
+                climaxBar.maxValue = Mathf.Max(1, Definition.climaxLimit);
+                climaxBar.value = CurrentClimax;
+            }
             if (climaxValueText != null)
                 climaxValueText.text = $"{CurrentClimax} / {Mathf.Max(1, Definition.climaxLimit)}";
+            if (battleStatusText != null)
+                battleStatusText.text = IsSaint ? "聖人" : RestOwnerTurns > 0 ? "休息" : "可行動";
+            if (staminaText != null) staminaText.text = RemainingStamina.ToString();
         }
 
         private static void SetSignedValue(TMP_Text[] labels, int index, int value, bool visible)

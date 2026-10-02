@@ -64,6 +64,18 @@ namespace FurrySocialCard.CardPresentation
             TweenAnchoredPosition(movementRect, target, duration, Ease.InOutQuad).SetLink(gameObject);
         }
 
+        public void ResetBattlePresentation()
+        {
+            CaptureRestPosition();
+            if (movementRect != null)
+            {
+                movementRect.DOKill();
+                movementRect.anchoredPosition = restPosition;
+            }
+            SetAttackOrderText(null);
+            SetAttackGlow(false, Color.white);
+        }
+
         public Tween CreateAttackTween(
             CharacterAttackTarget target,
             float distance,
@@ -85,7 +97,7 @@ namespace FurrySocialCard.CardPresentation
             float direction = isAlly ? 1f : -1f;
             Vector2 impactPosition = restPosition + Vector2.up * Mathf.Max(0f, distance) * direction;
 
-            Sequence sequence = DOTween.Sequence().SetLink(gameObject);
+            Sequence sequence = DOTween.Sequence().SetTarget(movementRect).SetLink(gameObject);
             sequence.Append(TweenAnchoredPosition(movementRect, impactPosition, forwardDuration, Ease.InQuad));
             sequence.AppendCallback(() => onImpact?.Invoke());
             sequence.Append(TweenAnchoredPosition(movementRect, restPosition, returnDuration, Ease.OutQuad));
@@ -165,7 +177,7 @@ namespace FurrySocialCard.CardPresentation
                     value => target.anchoredPosition = value,
                     destination,
                     Mathf.Max(0f, duration))
-                .SetEase(ease);
+                .SetTarget(target).SetEase(ease);
         }
 
         private RectTransform FindChild(string childName)

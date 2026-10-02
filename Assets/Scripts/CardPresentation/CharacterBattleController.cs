@@ -21,6 +21,59 @@ namespace FurrySocialCard.CardPresentation
             public Sprite portraitA;
         }
 
+        [Header("Victory / Tokens")]
+        [SerializeField, Min(1)] private int tokensToWin = 5;
+        public event Action<int, int> TokensChanged;
+        public int PlayerTokens { get; private set; }
+        public int EnemyTokens { get; private set; }
+        public bool CanAct(CharacterAttackTarget target) =>
+            target != null && combatants.TryGetValue(target, out var view) && view.CanAct;
+        public bool CanTarget(CharacterAttackTarget target) =>
+            target != null && combatants.TryGetValue(target, out var view) && !view.IsSaint;
+        public void CompleteSideTurn(bool player)
+        {
+            foreach (var view in combatants.Values)
+                if (view.IsAlly == player) view.CompleteOwnerTurn();
+            CheckEndGame(true);
+            RefreshSkillAvailability();
+        }
+        private void HandleBattlePhase(PlayerTurnDealController.Phase phase)
+        {
+            if (phase != PlayerTurnDealController.Phase.Initializing) return;
+            battleGeneration++;
+            if (skillGroup != null) { DOTween.Kill(skillGroup); skillGroup.SetActive(false); }
+            PlayerTokens = EnemyTokens = 0;
+            foreach (var pair in combatants)
+            {
+                pair.Key.ResetBattlePresentation();
+                pair.Value.ResetBattleState();
+            }
+            RefreshTokens();
+            RefreshSkillAvailability();
+        }
+        private void RefreshTokens()
+        {
+            TokensChanged?.Invoke(PlayerTokens, EnemyTokens);
+        }
+        private void CheckEndGame(bool includeDeck)
+        {
+            if (gameFlow == null || gameFlow.CurrentPhase == PlayerTurnDealController.Phase.GameOver) return;
+            bool allSaint = combatants.Count > 0;
+            foreach (var view in combatants.Values) allSaint &= view.IsSaint;
+            if (PlayerTokens < Mathf.Max(1, tokensToWin) && EnemyTokens < Mathf.Max(1, tokensToWin)
+                && !allSaint && !(includeDeck && gameFlow.IsDeckEmpty)) return;
+            string result = PlayerTokens == EnemyTokens ? "平手" : PlayerTokens > EnemyTokens ? "玩家勝利" : "對手勝利";
+            gameFlow.EndGame($"{result}\nToken {PlayerTokens} : {EnemyTokens}");
+        }
+        private void ApplyEffectClimax(CharacterCombatantView recipient, int delta, bool force, bool sourcePlayer)
+        {
+            if (recipient == null) return;
+            if (recipient.ApplyClimax(delta, force, recipient.IsAlly == sourcePlayer))
+            {
+                if (sourcePlayer) PlayerTokens++; else EnemyTokens++;
+                RefreshTokens();
+            }
+        }
         [Header("Data")]
         [SerializeField] private TextAsset characterData;
         [SerializeField] private CharacterSpriteEntry[] characterSprites;
@@ -50,21 +103,26 @@ namespace FurrySocialCard.CardPresentation
         private readonly Dictionary<string, Sprite> sprites = new Dictionary<string, Sprite>();
         private readonly Dictionary<CharacterAttackTarget, CharacterCombatantView> combatants = new Dictionary<CharacterAttackTarget, CharacterCombatantView>();
         private readonly Dictionary<string, List<PatternRequirement>> parsedPatterns = new Dictionary<string, List<PatternRequirement>>();
+        private int battleGeneration;
+        private Vector3 skillBaseScale = Vector3.one;
         public event Action<ResourceActionPlan> ResourceActionPreviewChanged;
         public event Action<SkillRequirementPreview> SkillRequirementPreviewChanged;
 
         private void Awake()
         {
             FindReferences();
+            if (skillGroup != null) skillBaseScale = skillGroup.transform.localScale;
             if (!LoadData()) return;
             BindTeam(playerCharacterGroups, playerTeam, true);
             BindTeam(enemyCharacterGroups, enemyTeam, false);
             if (gameFlow != null)
             {
                 gameFlow.ResourceCardsChanged += RefreshSkillAvailability;
+                gameFlow.PhaseChanged += HandleBattlePhase;
                 gameFlow.EnemyResourceCardsChanged += RefreshSkillAvailability;
             }
             RefreshSkillAvailability();
+            RefreshTokens();
         }
 
         private void OnDestroy()
@@ -72,6 +130,7 @@ namespace FurrySocialCard.CardPresentation
             if (gameFlow != null)
             {
                 gameFlow.ResourceCardsChanged -= RefreshSkillAvailability;
+                gameFlow.PhaseChanged -= HandleBattlePhase;
                 gameFlow.EnemyResourceCardsChanged -= RefreshSkillAvailability;
             }
             foreach (CharacterCombatantView view in combatants.Values)
@@ -154,7 +213,7 @@ namespace FurrySocialCard.CardPresentation
                 List<CardObject> available = view.IsAlly ? playerResources : enemyResources;
                 for (int index = 0; index < 3; index++)
                 {
-                    bool usable = TryGetSkill(view.Definition, index, out SkillDefinition skill) && IsUsable(skill, available);
+                    bool usable = view.CanAct && TryGetSkill(view.Definition, index, out SkillDefinition skill) && IsUsable(skill, available);
                     view.SetSkillAvailable(index, usable);
                 }
             }
@@ -173,41 +232,12 @@ namespace FurrySocialCard.CardPresentation
                 : gameFlow.GetAvailableEnemyResourceCardsSnapshot();
             ResourceActionPlan resourcePlan = BuildResourceActionPlan(assignments, resources, preferredConsumeCards);
             ResourceActionPreviewChanged?.Invoke(resourcePlan);
-            var projected = new Dictionary<CharacterCombatantView, int>();
-            var participants = new HashSet<CharacterCombatantView>();
-            foreach (CharacterCombatantView view in combatants.Values) projected[view] = view.CurrentClimax;
-
-            foreach (SkillResourcePlan skillPlan in resourcePlan.Skills)
-            {
-                CharacterCombatantView attacker = skillPlan.Attacker;
-                CharacterCombatantView target = skillPlan.Target;
-                participants.Add(attacker);
-                participants.Add(target);
-                int selfDelta = 0;
-                int targetDelta = 0;
-                foreach (string effectId in skillPlan.Skill.effectIds)
-                {
-                    if (!effects.TryGetValue(effectId, out EffectDefinition effect)) continue;
-                    CharacterCombatantView recipient = ResolvePreviewTarget(effect.target, attacker, target);
-                    if (recipient == null || !projected.TryGetValue(recipient, out int before)) continue;
-                    int after;
-                    if (effect.effectType == "force_climax")
-                        after = Mathf.Max(1, recipient.Definition.climaxLimit);
-                    else if (effect.effectType == "climax_delta")
-                        after = Mathf.Clamp(before + EvaluateValue(effect.value, resources), 0,
-                            Mathf.Max(1, recipient.Definition.climaxLimit));
-                    else
-                        continue;
-                    int effectiveDelta = after - before;
-                    projected[recipient] = after;
-                    if (recipient == attacker) selfDelta += effectiveDelta;
-                    if (recipient == target) targetDelta += effectiveDelta;
-                }
-                attacker.SetSkillClimaxPreview(skillPlan.SkillIndex, selfDelta, targetDelta, true);
-            }
-
-            foreach (CharacterCombatantView participant in participants)
-                participant.SetClimaxPreview(projected[participant], true);
+            foreach (SkillResourcePlan skill in resourcePlan.Skills)
+                skill.Attacker.SetSkillClimaxPreview(skill.SkillIndex, skill.SelfDelta, skill.TargetDelta, true);
+            foreach (var pair in resourcePlan.ProjectedStates)
+                pair.Key.SetStatePreview(pair.Value);
+            foreach (var pair in resourcePlan.CancelledActions)
+                pair.Key.SetActionCancelledPreview(pair.Value);
             return resourcePlan;
         }
 
@@ -229,6 +259,7 @@ namespace FurrySocialCard.CardPresentation
             ResourceActionPlan preparedPlan = null)
         {
             if (gameFlow == null || assignments == null || assignments.Count == 0) yield break;
+            int generation = battleGeneration;
 
             List<CardObject> resourceSnapshot = isPlayer
                 ? gameFlow.GetAvailableResourceCardsSnapshot()
@@ -252,9 +283,13 @@ namespace FurrySocialCard.CardPresentation
             for (int planIndex = 0; planIndex < plans.Count; planIndex++)
             {
                 AttackPlan plan = plans[planIndex];
+                if (generation != battleGeneration) yield break;
+                if (!plan.AttackerView.CanAct || plan.TargetView.IsSaint) continue;
+                if (gameFlow.CurrentPhase == PlayerTurnDealController.Phase.GameOver) yield break;
                 foreach (SkillResourcePlan skill in plan.Skills)
                 {
                     yield return ShowSkillPerformance(skill.Skill.displayName);
+                    if (generation != battleGeneration) yield break;
                 }
 
                 Tween attackTween = plan.AttackerTarget.CreateAttackTween(
@@ -265,6 +300,7 @@ namespace FurrySocialCard.CardPresentation
                     hitShakeVibrato,
                     () =>
                     {
+                        if (generation != battleGeneration) return;
                         foreach (SkillResourcePlan skill in plan.Skills)
                         {
                             ExecuteSkill(new SkillExecution(plan.AttackerView, plan.TargetView, skill.Skill), skill.PaymentCards, resourceSnapshot, isPlayer);
@@ -272,6 +308,9 @@ namespace FurrySocialCard.CardPresentation
                         RefreshSkillAvailability();
                     });
                 if (attackTween != null) yield return attackTween.WaitForCompletion();
+                if (generation != battleGeneration) yield break;
+                CheckEndGame(false);
+                if (gameFlow.CurrentPhase == PlayerTurnDealController.Phase.GameOver) yield break;
 
                 if (planIndex < plans.Count - 1 && attackIntervalSeconds > 0f)
                 {
@@ -288,7 +327,7 @@ namespace FurrySocialCard.CardPresentation
             CanvasGroup canvasGroup = skillGroup.GetComponent<CanvasGroup>();
             if (canvasGroup == null) canvasGroup = skillGroup.AddComponent<CanvasGroup>();
             RectTransform rect = skillGroup.transform as RectTransform;
-            Vector3 baseScale = rect != null ? rect.localScale : Vector3.one;
+            Vector3 baseScale = skillBaseScale;
 
             float maximum = Mathf.Max(0.1f, maximumSkillPerformanceSeconds);
             float hold = Mathf.Min(Mathf.Max(0f, skillHoldSeconds), maximum);
@@ -299,7 +338,7 @@ namespace FurrySocialCard.CardPresentation
             canvasGroup.alpha = 0f;
             if (rect != null) rect.localScale = baseScale * 0.9f;
 
-            Sequence sequence = DOTween.Sequence().SetLink(skillGroup);
+            Sequence sequence = DOTween.Sequence().SetTarget(skillGroup).SetLink(skillGroup);
             sequence.Append(TweenCanvasAlpha(canvasGroup, 1f, transition, Ease.OutQuad));
             if (rect != null) sequence.Join(TweenScale(rect, baseScale, transition, Ease.OutBack));
             if (hold > 0f) sequence.AppendInterval(hold);
@@ -334,12 +373,12 @@ namespace FurrySocialCard.CardPresentation
                 }
                 if (effect.effectType == "force_climax")
                 {
-                    ResolveTarget(effect.target, execution)?.ForceClimax();
+                    ApplyEffectClimax(ResolveTarget(effect.target, execution), 0, true, isPlayer);
                 }
                 else if (effect.effectType == "climax_delta")
                 {
                     int value = EvaluateValue(effect.value, resourceSnapshot);
-                    ResolveTarget(effect.target, execution)?.AddClimax(value);
+                    ApplyEffectClimax(ResolveTarget(effect.target, execution), value, false, isPlayer);
                 }
                 else
                 {
@@ -403,6 +442,11 @@ namespace FurrySocialCard.CardPresentation
             IReadOnlyCollection<CardObject> preferredConsumeCards)
         {
             var skillPlans = new List<SkillResourcePlan>();
+            var projected = new Dictionary<CharacterCombatantView, CharacterBattleState>();
+            var cancelled = new Dictionary<CharacterCombatantView, string>();
+            foreach (var view in combatants.Values) projected[view] = view.BattleState.Copy();
+            int projectedPlayerTokens = PlayerTokens;
+            int projectedEnemyTokens = EnemyTokens;
             var reserved = new HashSet<CardObject>();
             var changes = new Dictionary<ResourceCellKey, ResourceCellChange>();
             var selectableConsumeCards = new HashSet<CardObject>();
@@ -427,6 +471,14 @@ namespace FurrySocialCard.CardPresentation
                 if (assignment.Key == null || assignment.Value == null) continue;
                 if (!combatants.TryGetValue(assignment.Key, out CharacterCombatantView attacker) ||
                     !combatants.TryGetValue(assignment.Value, out CharacterCombatantView target)) continue;
+                if (!projected[attacker].CanAct || projected[target].IsSaint
+                    || projectedPlayerTokens >= Mathf.Max(1, tokensToWin)
+                    || projectedEnemyTokens >= Mathf.Max(1, tokensToWin))
+                {
+                    cancelled[attacker] = projected[target].IsSaint ? "預計取消：目標進入聖人模式"
+                        : !projected[attacker].CanAct ? "預計取消：角色無法行動" : "預計取消：勝負已定";
+                    continue;
+                }
                 for (int skillIndex = 0; skillIndex < 3; skillIndex++)
                 {
                     if (!TryGetSkill(attacker.Definition, skillIndex, out SkillDefinition skill) ||
@@ -470,7 +522,7 @@ namespace FurrySocialCard.CardPresentation
                         else
                             change.ConsumeCount++;
                     }
-                    skillPlans.Add(new SkillResourcePlan
+                    var skillPlan = new SkillResourcePlan
                     {
                         Attacker = attacker,
                         Target = target,
@@ -478,12 +530,32 @@ namespace FurrySocialCard.CardPresentation
                         Skill = skill,
                         Requirements = requirements,
                         PaymentCards = payment
-                    });
+                    };
+                    foreach (string effectId in skill.effectIds)
+                    {
+                        if (!effects.TryGetValue(effectId, out EffectDefinition effect)) continue;
+                        CharacterCombatantView recipient = ResolvePreviewTarget(effect.target, attacker, target);
+                        if (recipient == null || (effect.effectType != "force_climax" && effect.effectType != "climax_delta")) continue;
+                        CharacterBattleState state = projected[recipient];
+                        int before = state.Climax;
+                        bool triggered = state.Apply(EvaluateValue(effect.value, resources),
+                            effect.effectType == "force_climax", recipient.IsAlly == attacker.IsAlly);
+                        int delta = triggered ? state.Limit - before : state.Climax - before;
+                        if (recipient == attacker) skillPlan.SelfDelta += delta;
+                        if (recipient == target) skillPlan.TargetDelta += delta;
+                        if (triggered)
+                        {
+                            if (attacker.IsAlly) projectedPlayerTokens++; else projectedEnemyTokens++;
+                        }
+                    }
+                    skillPlans.Add(skillPlan);
                 }
             }
             return new ResourceActionPlan
             {
                 Skills = skillPlans,
+                ProjectedStates = projected,
+                CancelledActions = cancelled,
                 CellChanges = changes,
                 SelectableConsumeCards = new List<CardObject>(selectableConsumeCards),
                 RequiredConsumeCount = requiredConsumeCount,
